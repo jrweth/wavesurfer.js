@@ -3,6 +3,13 @@
 // Create an instance
 var wavesurfer = Object.create(WaveSurfer);
 
+// Create elan instance
+var elan = Object.create(WaveSurfer.ELAN);
+
+
+// Create Elan Wave Segment
+var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
+
 // Init & load
 document.addEventListener('DOMContentLoaded', function () {
     var options = {
@@ -12,7 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
         loaderColor   : 'purple',
         cursorColor   : 'navy',
         selectionColor: '#d0e9c6',
-        loopSelection : false
+        backend: 'WebAudio',
+        loopSelection : false,
+        renderer: 'CanvasScaled'
     };
 
     if (location.search.match('scroll')) {
@@ -24,67 +33,37 @@ document.addEventListener('DOMContentLoaded', function () {
         options.normalize = true;
     }
 
-    /* Progress bar */
-    (function () {
-        var progressDiv = document.querySelector('#progress-bar');
-        var progressBar = progressDiv.querySelector('.progress-bar');
+    //set up listener for when elan is done
+    elan.on('ready', function (data) {
+        //go load the wave form
+        wavesurfer.load('transcripts/' + data.media.url);
 
-        var showProgress = function (percent) {
-            progressDiv.style.display = 'block';
-            progressBar.style.width = percent + '%';
-        };
+        //add some styling to elan table
+        var classList = elan.container.querySelector('table').classList;
+        [ 'table', 'table-striped', 'table-hover' ].forEach(function (cl) {
+            classList.add(cl);
+        });
+    });
 
-        var hideProgress = function () {
-            progressDiv.style.display = 'none';
-        };
+    //set up listener for when wavesurfer is done
+    wavesurfer.on('ready', function() {
+        elanWaveSegment.addSegmentColumn(elan, wavesurfer);
+    });
 
-        wavesurfer.on('loading', showProgress);
-        wavesurfer.on('ready', hideProgress);
-        wavesurfer.on('destroy', hideProgress);
-        wavesurfer.on('error', hideProgress);
-    }());
+    // Init wavesurferSegment
+    elanWaveSegment.init({ });
 
     // Init wavesurfer
     wavesurfer.init(options);
 
-    // Init ELAN plugin
-    var elan = Object.create(WaveSurfer.ELAN);
-
+    //init elan
     elan.init({
         url: 'transcripts/001z.xml',
         container: '#annotations',
         tiers: {
             Text: true,
-            Comments: true
+            Comments: false
         }
-    });
-
-    // Init Elan Wave Segment
-    var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
-
-    elanWaveSegment.init({
-        ELAN: elan
-    });
-
-
-    elan.on('ready', function (data) {
-        wavesurfer.load('transcripts/' + data.media.url);
-        elanWaveSegment.addSegmentColumn();
-    });
-
-    wavesurfer.on('waveform-ready'), function() {
-        elanWaveSegment.addSegmentColumn();
-    }
-
-    elan.on('select', function (start, end) {
-        wavesurfer.backend.play(start, end);
-    });
-
-    elan.on('ready', function () {
-        var classList = elan.container.querySelector('table').classList;
-        [ 'table', 'table-striped', 'table-hover' ].forEach(function (cl) {
-            classList.add(cl);
-        });
     });
 
     var prevAnnotation, prevRow, region;
