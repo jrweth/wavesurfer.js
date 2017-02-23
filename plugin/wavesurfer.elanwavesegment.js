@@ -3,18 +3,16 @@
 WaveSurfer.ELANWaveSegment = {
 
     defaultParams: {
-        stretchSegmentWidth: false,
-        maxWaveSegmentWidth: '300',
-        height: '90',
+        waveSegmentWidth: '200',
+        height: '45',
         pixelRatio    : 1,
         waveColor     : 'violet',
         progressColor : 'purple',
         loaderColor   : 'purple',
-        cursorColor   : 'navy',
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'Canvas'
+        renderer: 'CanvasScaled'
     },
 
     init: function (params) {
@@ -26,9 +24,6 @@ WaveSurfer.ELANWaveSegment = {
     addSegmentColumn: function(elan, wavesurfer) {
         this.ELAN = elan;
         this.wavesurfer = wavesurfer;
-        console.log(this.ELAN);
-        this.calcMaxSegmentLength();
-
 
         //grab all the rows in the ELAN table
         var tableRows = elan.container.getElementsByTagName('tr');
@@ -55,15 +50,6 @@ WaveSurfer.ELANWaveSegment = {
         }
     },
 
-    //calculates the maximum length in time of an elan segment
-    calcMaxSegmentLength: function() {
-        var segments = this.ELAN.renderedAlignable;
-        this.maxSegmentLength = 0;
-        for(var i in segments) {
-            var length = segments[i].end - segments[i].start;
-            if(length > this.maxSegmentLength) this.maxSegmentLength = length;
-        }
-    },
 
     //returns the peaks for a given time segment
     getPeaksForTimeSegment: function(startTime, endTime) {
@@ -76,29 +62,25 @@ WaveSurfer.ELANWaveSegment = {
         return this.wavesurfer.backend.mergedPeaks.slice(startPeak, endPeak);
     },
 
+    getScaleForPeaks: function(peaks, width) {
+        return this.params.waveSegmentWidth / peaks.length;
+    },
+
     //append the wave segment defined by the elanIndex to the element
     appendWaveSegmentToElement(el, elanIndex) {
         var line = this.ELAN.renderedAlignable[elanIndex];
         var container = document.createElement('div');
-        var width = this.params.maxWaveSegmentWidth;
+        var width = this.params.waveSegmentWidth;
 
-        //adjust the canvas size depending if we are stretching or not
-        if(!this.params.stretchSegmentWidth) {
-           //width = this.params.maxWaveSegmentWidth * (line.end - line.start) / this.maxSegmentLength;
-        }
-        container.style.border = '1px solid black';
         container.style.width = width.toString() + 'px';
         container.style.height = this.params.height.toString() + 'px';
-        container.style.position = 'relative';
 
 
-        var drawer = Object.create(WaveSurfer.Drawer['CanvasScaled']);
-        var drawerParams = this.params;
-        drawerParams.scale = this.wavesurfer.backend.getDuration() / (5 *(line.end - line.start));
-        console.log(width + ' - '  + drawerParams.scale);
-        drawer.init(container, drawerParams);
         var peaks = this.getPeaksForTimeSegment(line.start, line.end);
-        drawer.drawPeaks(peaks, this.params.maxWaveSegmentWidth, 0, this.params.maxWaveSegmentWidth);
+        var drawer = Object.create(WaveSurfer.Drawer['CanvasScaled']);
+
+        drawer.init(container, this.params);
+        drawer.drawPeaks(peaks, this.waveSegmentWidth, 0, peaks.length/2);
 
 
         el.appendChild(container);

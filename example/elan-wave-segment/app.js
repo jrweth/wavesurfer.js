@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'CanvasScaled'
+        renderer: 'Canvas'
     };
 
     if (location.search.match('scroll')) {
