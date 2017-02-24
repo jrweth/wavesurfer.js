@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
     //set up listener for when elan is done
     elan.on('ready', function (data) {
         //go load the wave form
-        wavesurfer.load('transcripts/' + data.media.url);
+        wavesurfer.load('transcripts/GoDownDeath.mp3');
 
         //add some styling to elan table
         var classList = elan.container.querySelector('table').classList;
@@ -58,11 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     //init elan
     elan.init({
-        url: 'transcripts/001z.xml',
+        url: 'transcripts/GoDownDeath.xml',
         container: '#annotations',
         tiers: {
-            Text: true,
-            Comments: false
+            'Line Text': true
         }
     });
 
