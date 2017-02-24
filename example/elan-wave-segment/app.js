@@ -1,20 +1,20 @@
 'use strict';
 
-// Create an instance
+// Create the wave surfer instance
 var wavesurfer = Object.create(WaveSurfer);
 
 // Create elan instance
 var elan = Object.create(WaveSurfer.ELAN);
 
-// Create Elan Wave Segment
+// Create Elan Wave Segment instance
 var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
 
 // Init & load
 document.addEventListener('DOMContentLoaded', function () {
     var options = {
         container     : '#waveform',
-        waveColor     : 'violet',
-        progressColor : 'purple',
+        waveColor     : 'blue',
+        progressColor : 'navy',
         loaderColor   : 'purple',
         cursorColor   : 'navy',
         selectionColor: '#d0e9c6',
@@ -32,6 +32,31 @@ document.addEventListener('DOMContentLoaded', function () {
         options.normalize = true;
     }
 
+    // ############################# set up event handlers ###########################
+    /* Progress bar */
+    (function () {
+        var progressDiv = document.querySelector('#progress-bar');
+        var progressBar = progressDiv.querySelector('.progress-bar');
+
+        var showProgress = function (percent) {
+            progressDiv.style.display = 'block';
+            progressBar.style.width = percent + '%';
+        };
+
+        var hideProgress = function () {
+            progressDiv.style.display = 'none';
+        };
+
+        wavesurfer.on('loading', showProgress);
+        wavesurfer.on('ready', hideProgress);
+        wavesurfer.on('destroy', hideProgress);
+        wavesurfer.on('error', hideProgress);
+    }());
+
+    elan.on('select', function (start, end) {
+        wavesurfer.backend.play(start, end);
+    });
+
     //set up listener for when elan is done
     elan.on('ready', function (data) {
         //go load the wave form
@@ -46,11 +71,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     //set up listener for when wavesurfer is done
     wavesurfer.on('ready', function() {
-        elanWaveSegment.addSegmentColumn(elan, wavesurfer);
+        //both elan and wavesurfer should be ready - so initialization of wave segments can now happed
+        options.ELAN = elan;
+        options.wavesurfer = wavesurfer;
+        elanWaveSegment.init(options);
     });
-
-    // Init wavesurferSegment
-    elanWaveSegment.init(options);
 
     // Init wavesurfer
     wavesurfer.init(options);
@@ -64,9 +89,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    //setup progress updates for Elan and Elan Wave Segment
     var prevAnnotation, prevRow, region;
     var onProgress = function (time) {
         var annotation = elan.getRenderedAnnotation(time);
+
+        elanWaveSegment.onProgress(time);
+
 
         if (prevAnnotation != annotation) {
             prevAnnotation = annotation;
@@ -84,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (before) {
                     elan.container.scrollTop = before.offsetTop;
                 }
-
                 // Region
                 region = wavesurfer.addRegion({
                     start: annotation.start,

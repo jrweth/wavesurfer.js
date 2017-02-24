@@ -5,25 +5,25 @@ WaveSurfer.ELANWaveSegment = {
     defaultParams: {
         waveSegmentWidth: 200,
         peaksPerSegment: 100,
-        waveSegmentHeight: 45,
+        waveSegmentHeight: 30,
         waveSegmentRenderer: 'Canvas',
-        pixelRatio: 1
+        pixelRatio: 1,
     },
 
     init: function (params) {
         // Extract relevant parameters (or defaults)
         this.params = WaveSurfer.util.extend({}, this.defaultParams, params);
+        this.ELAN = params.ELAN;
+        this.wavesurfer = params.wavesurfer;
         this.waveSegments = [];
+        this.addSegmentColumn();
     },
 
     //add a column to the Elan table to contain the segment
-    addSegmentColumn: function(elan, wavesurfer) {
-        this.ELAN = elan;
-        this.wavesurfer = wavesurfer;
+    addSegmentColumn: function() {
 
-        console.log(elan.renderedAlignable);
         //grab all the rows in the ELAN table
-        var tableRows = elan.container.getElementsByTagName('tr');
+        var tableRows = this.ELAN.container.getElementsByTagName('tr');
 
         //create the header column for the wave forms
         var th = document.createElement('th');
@@ -37,8 +37,8 @@ WaveSurfer.ELANWaveSegment = {
         //
 
         //loop through each row and add the table cell for the wave form
-        for(var i = 0; i < elan.renderedAlignable.length; i++) {
-            var annotationRow = elan.getAnnotationNode(elan.renderedAlignable[i]);
+        for(var i = 0; i < this.ELAN.renderedAlignable.length; i++) {
+            var annotationRow = this.ELAN.getAnnotationNode(this.ELAN.renderedAlignable[i]);
 
             //create the td for the wave
             var td = document.createElement('td');
@@ -130,6 +130,7 @@ WaveSurfer.ELANWaveSegment = {
         }
 
     }
+
 };
 
 WaveSurfer.util.extend(WaveSurfer.ELANWaveSegment, WaveSurfer.Observer);
