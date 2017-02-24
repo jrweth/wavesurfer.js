@@ -1,41 +1,13 @@
 'use strict';
+WaveSurfer.Drawer.CanvasScaled = Object.create(WaveSurfer.Drawer);
 
-WaveSurfer.Drawer.CanvasScaled = {
-    init: function (container, params) {
-        this.container = container;
-        this.params = params;
+WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasScaled, {
 
-        this.width = params.waveSegmentWidth;
-        this.height = params.height;
-
-        this.lastPos = 0;
-
-        this.createWrapper();
-        this.createElements();
-    },    /* Renderer-specific methods */
-
-    createWrapper: function () {
-        this.wrapper = this.container.appendChild(
-            document.createElement('wave')
-        );
-
-        this.style(this.wrapper, {
-            display: 'block',
-            position: 'relative',
-            userSelect: 'none',
-            webkitUserSelect: 'none',
-            height: this.params.height + 'px',
-            width: this.params.waveSegmentWidth + 'px',
-        });
+    initDrawer: function(params) {
+        this.params.fillParent = true;
     },
 
-    drawPeaks: function (peaks, length, start, end) {
-        this.setWidth(length);
 
-        this.params.barWidth ?
-            this.drawBars(peaks, 0, start, end) :
-            this.drawWave(peaks, 0, start, end);
-    },
 
     createElements: function () {
         this.waveCanvas = document.createElement('canvas');
@@ -56,14 +28,10 @@ WaveSurfer.Drawer.CanvasScaled = {
         this.waveCc = this.waveCanvas.getContext('2d');
     },
 
-    setWidth: function (width) {
-        //this.width = width;
-        //this.waveCanvas.setAttribute('width', width + 'px');
-        //this.style(this.wrapper, {width: width + 'px'});
-    },
+
 
     getScale: function (numPeaks, start, end) {
-        return this.width / ((numPeaks/2) - 1);
+        return this.params.waveSegmentWidth / ((numPeaks/2) - 1);
     },
 
     drawWave: function (peaks, channelIndex, start, end) {
@@ -103,7 +71,7 @@ WaveSurfer.Drawer.CanvasScaled = {
 
         var scale = this.getScale(peaks.length, start, end);
 
-        var absmax = 1;
+        var absmax = 0.3;
 
         this.waveCc.fillStyle = this.params.waveColor;
 
@@ -132,16 +100,9 @@ WaveSurfer.Drawer.CanvasScaled = {
         this.waveCc.fill();
 
         // Always draw a median line
-        this.waveCc.fillRect(0, halfH + offsetY - $, this.width, $);
+        this.waveCc.fillRect(0, halfH + offsetY - $, this.params.waveSegmentWidth, $);
 
     },
 
-    style: function (el, styles) {
-        Object.keys(styles).forEach(function (prop) {
-            if (el.style[prop] !== styles[prop]) {
-                el.style[prop] = styles[prop];
-            }
-        });
-        return el;
-    },
-};
+
+});
