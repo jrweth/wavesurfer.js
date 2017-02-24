@@ -4,8 +4,8 @@ WaveSurfer.ELANWaveSegment = {
 
     defaultParams: {
         waveSegmentWidth: '200',
+        peaksPerSegment: '200',
         height: '45',
-        pixelRatio    : 1,
         waveColor     : 'violet',
         progressColor : 'purple',
         loaderColor   : 'purple',
@@ -53,13 +53,24 @@ WaveSurfer.ELANWaveSegment = {
 
     //returns the peaks for a given time segment
     getPeaksForTimeSegment: function(startTime, endTime) {
-        var duration = this.wavesurfer.backend.getDuration();
-        var numPeaks = this.wavesurfer.backend.mergedPeaks.length;
-        var startPeak = Math.floor(numPeaks * startTime / duration);
-        if(startPeak % 2 == 1) startPeak++;
-        var endPeak = Math.floor(numPeaks * endTime / duration);
-        if(endPeak % 2 == 1) endPeak++;
-        return this.wavesurfer.backend.mergedPeaks.slice(startPeak, endPeak);
+        var totalDuration = this.wavesurfer.backend.getDuration();
+        var segmentDuration  = endTime - startTime;
+
+        //calculate the total number of peak by splitting our segment into 50 parts
+        var totalPeaks = totalDuration * this.params.peaksPerSegment / segmentDuration;
+
+        var peakDuration = totalDuration / totalPeaks;
+
+        var startPeak = ~~(startTime / peakDuration);
+        var endPeak = ~~(endTime / peakDuration);
+
+        var peaks = this.wavesurfer.backend.getPeaks(totalPeaks, startPeak, endPeak);
+        var shiftedPeaks = [];
+        //shift the peak indexes back to 0
+        for(var i in peaks) {
+            shiftedPeaks.push(peaks[i]);
+        }
+        return shiftedPeaks;
     },
 
     getScaleForPeaks: function(peaks, width) {
@@ -78,6 +89,7 @@ WaveSurfer.ELANWaveSegment = {
 
         var peaks = this.getPeaksForTimeSegment(line.start, line.end);
         var drawer = Object.create(WaveSurfer.Drawer['CanvasScaled']);
+
 
         drawer.init(container, this.params);
         drawer.drawPeaks(peaks, this.waveSegmentWidth, 0, peaks.length/2);
