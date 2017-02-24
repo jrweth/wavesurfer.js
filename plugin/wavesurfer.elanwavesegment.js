@@ -13,6 +13,7 @@ WaveSurfer.ELANWaveSegment = {
     init: function (params) {
         // Extract relevant parameters (or defaults)
         this.params = WaveSurfer.util.extend({}, this.defaultParams, params);
+        this.waveSegments = [];
     },
 
     //add a column to the Elan table to contain the segment
@@ -20,6 +21,7 @@ WaveSurfer.ELANWaveSegment = {
         this.ELAN = elan;
         this.wavesurfer = wavesurfer;
 
+        console.log(elan.renderedAlignable);
         //grab all the rows in the ELAN table
         var tableRows = elan.container.getElementsByTagName('tr');
 
@@ -32,16 +34,20 @@ WaveSurfer.ELANWaveSegment = {
         //insert wave form column as the second column
         tableRows[0].insertBefore(th, tableRows[0].firstChild.nextSibling);
 
+        //
+
         //loop through each row and add the table cell for the wave form
-        for(var i = 1; i < tableRows.length; i++) {
-            //create the td
+        for(var i = 0; i < elan.renderedAlignable.length; i++) {
+            var annotationRow = elan.getAnnotationNode(elan.renderedAlignable[i]);
+
+            //create the td for the wave
             var td = document.createElement('td');
             td.className = 'wavesurfer-wave';
 
             //create the wave segment
-            this.appendWaveSegmentToElement(td, i-1);
+            this.appendWaveSegmentToElement(td, i);
 
-            tableRows[i].insertBefore(td, tableRows[i].firstChild.nextSibling);
+            annotationRow.insertBefore(td, annotationRow.firstChild.nextSibling);
         }
     },
 
@@ -81,8 +87,7 @@ WaveSurfer.ELANWaveSegment = {
         el.appendChild(container);
 
         var peaks = this.getPeaksForTimeSegment(line.start, line.end);
-        var drawer = Object.create(WaveSurfer.Drawer[this.params.waveSegmentRenderer]);
-
+        this.waveSegments[elanIndex] = Object.create(WaveSurfer.Drawer[this.params.waveSegmentRenderer]);
 
         var drawerParams = {
             fillParent: true,
@@ -90,10 +95,39 @@ WaveSurfer.ELANWaveSegment = {
             normalize: true
         }
         drawerParams = WaveSurfer.util.extend({}, this.params, drawerParams);
-        drawer.init(container, drawerParams);
-        drawer.drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length/2);
+        this.waveSegments[elanIndex].init(container, drawerParams);
+        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length/2);
 
-        drawer.updateProgress(100);
+        this.waveSegments[elanIndex].updateProgress(0);
+
+    },
+
+    /**
+     * Function to update the progress of the wave segments when time of the audio player is updated
+     * @param time - the current time of the audio
+     */
+    onProgress:  function(time) {
+        for(var i = 0; i < this.waveSegments.length; i++) {
+            var start = this.ELAN.renderedAlignable[i].start;
+            var end = this.ELAN.renderedAlignable[i].end;
+            var progress;
+
+            //player has not reached this segment yet - set not started
+            if(start > time) {
+                progress = 0;
+            }
+            //player has already passed this segment - set complete
+            else if(end < time) {
+                progress = this.params.waveSegmentWidth;
+            }
+            //find what percentage has been complete and set
+            else {
+                var completion = (time - start) / (end - start);
+                progress = completion * this.params.waveSegmentWidth;
+            }
+
+            this.waveSegments[i].updateProgress(progress);
+        }
 
     }
 };
