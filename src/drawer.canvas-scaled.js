@@ -63,8 +63,6 @@ WaveSurfer.Drawer.CanvasScaled = {
     },
 
     getScale: function (numPeaks, start, end) {
-        console.log(this.width);
-        console.log(numPeaks);
         return this.width / ((numPeaks/2) - 1);
     },
 
@@ -103,7 +101,6 @@ WaveSurfer.Drawer.CanvasScaled = {
         var offsetY = height * channelIndex || 0;
         var halfH = height / 2;
 
-        console.log(peaks);
         var scale = this.getScale(peaks.length, start, end);
 
         var absmax = 1;
@@ -118,9 +115,8 @@ WaveSurfer.Drawer.CanvasScaled = {
         for (var i = start; i < end; i++) {
             var h = Math.round(peaks[2 * i] / absmax * halfH);
             var x = i * scale + $;
-            var y = halfH - h + offsetY;
+            var y = halfH + h + offsetY;
             this.waveCc.lineTo(x, y);
-            console.log('i:' + i + '  x: ' + x + ' y: ' + y);
         }
 
         // Draw the bottom edge going backwards, to make a single
@@ -128,9 +124,8 @@ WaveSurfer.Drawer.CanvasScaled = {
         for (var i = end - 1; i >= start; i--) {
             var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
             var x = i * scale + $;
-            var y = halfH - h + offsetY;
+            var y = halfH + h + offsetY;
             this.waveCc.lineTo(x, y);
-            console.log('i:' + i + '  x: ' + x + ' y: ' + y);
         }
 
         this.waveCc.closePath();
