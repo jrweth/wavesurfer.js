@@ -6,7 +6,6 @@ var wavesurfer = Object.create(WaveSurfer);
 // Create elan instance
 var elan = Object.create(WaveSurfer.ELAN);
 
-
 // Create Elan Wave Segment
 var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
 
@@ -51,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Init wavesurferSegment
-    elanWaveSegment.init({ });
+    elanWaveSegment.init(options);
 
     // Init wavesurfer
     wavesurfer.init(options);
