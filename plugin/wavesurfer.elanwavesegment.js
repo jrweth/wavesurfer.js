@@ -3,16 +3,11 @@
 WaveSurfer.ELANWaveSegment = {
 
     defaultParams: {
-        waveSegmentWidth: '200',
-        peaksPerSegment: '200',
-        height: '45',
-        waveColor     : 'violet',
-        progressColor : 'purple',
-        loaderColor   : 'purple',
-        selectionColor: '#d0e9c6',
-        backend: 'WebAudio',
-        loopSelection : false,
-        renderer: 'CanvasScaled'
+        waveSegmentWidth: 200,
+        peaksPerSegment: 100,
+        waveSegmentHeight: 45,
+        waveSegmentRenderer: 'Canvas',
+        pixelRatio: 1
     },
 
     init: function (params) {
@@ -32,7 +27,7 @@ WaveSurfer.ELANWaveSegment = {
         var th = document.createElement('th');
         th.textContent = 'Wave';
         th.className = 'wavesurfer-wave';
-        th.setAttribute('style', 'width: ' + this.params.maxWaveSegmentWidth + 'px')
+        th.setAttribute('style', 'width: ' + this.params.waveSegmentWidth + 'px')
 
         //insert wave form column as the second column
         tableRows[0].insertBefore(th, tableRows[0].firstChild.nextSibling);
@@ -56,7 +51,7 @@ WaveSurfer.ELANWaveSegment = {
         var totalDuration = this.wavesurfer.backend.getDuration();
         var segmentDuration  = endTime - startTime;
 
-        //calculate the total number of peak by splitting our segment into 50 parts
+        //calculate the total number of peak by splitting our segment
         var totalPeaks = totalDuration * this.params.peaksPerSegment / segmentDuration;
 
         var peakDuration = totalDuration / totalPeaks;
@@ -73,9 +68,6 @@ WaveSurfer.ELANWaveSegment = {
         return shiftedPeaks;
     },
 
-    getScaleForPeaks: function(peaks, width) {
-        return this.params.waveSegmentWidth / peaks.length;
-    },
 
     //append the wave segment defined by the elanIndex to the element
     appendWaveSegmentToElement(el, elanIndex) {
@@ -84,18 +76,25 @@ WaveSurfer.ELANWaveSegment = {
         var width = this.params.waveSegmentWidth;
 
         container.style.width = width.toString() + 'px';
-        container.style.height = this.params.height.toString() + 'px';
-
-
-        var peaks = this.getPeaksForTimeSegment(line.start, line.end);
-        var drawer = Object.create(WaveSurfer.Drawer['CanvasScaled']);
-
-
-        drawer.init(container, this.params);
-        drawer.drawPeaks(peaks, this.waveSegmentWidth, 0, peaks.length/2);
-
+        container.style.height = this.params.waveSegmentHeight.toString() + 'px';
 
         el.appendChild(container);
+
+        var peaks = this.getPeaksForTimeSegment(line.start, line.end);
+        var drawer = Object.create(WaveSurfer.Drawer[this.params.waveSegmentRenderer]);
+
+
+        var drawerParams = {
+            fillParent: true,
+            height: this.params.waveSegmentHeight,
+            normalize: true
+        }
+        drawerParams = WaveSurfer.util.extend({}, this.params, drawerParams);
+        drawer.init(container, drawerParams);
+        drawer.drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length/2);
+
+        drawer.updateProgress(100);
+
     }
 };
 
