@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'Canvas'
+        renderer: 'CanvasPitch'
     };
 
     if (location.search.match('scroll')) {
