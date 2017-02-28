@@ -10,12 +10,13 @@
  * - Convert to pitch Tier (Convert -> Down to Pitch Tier)
  * - Save as Text File (Save -> Save as Headerless Spreadsheet File)
  *
- * Params which should be sent in as initialization values are the following
- * - pitchArray:             array of objects with time and pitch
- * - pitchFileUrl:           url of the file that contains the pitch information
- * - pitchTimeStart:         the time of the pitch file which corresponds with the first peak (defaults to 0)
- * - pitchTimeEnd:           the time of the pitch file which corresponds with the last peak (defaults maximum pitch time)
- * - normalizePitchTo:       [segment/entire/none] - what value to normalize the pitch to
+ * Params which can be sent in as initialization values are the following
+ * - pitchArray:             array of objects with time and pitch (required unless pitchFileUrl is set)
+ * - pitchFileUrl:           url of the file that contains the pitch information (required unless pitchArray is set)
+ * - pitchTimeStart:         the time of the pitch file which corresponds with the start of the displayed wave (defaults to 0)
+ * - pitchTimeEnd:           the time of the pitch file which corresponds with the end of the displayed wave (defaults maximum pitch time)
+ * - normalizePitchTo:       [whole/segment/none] - what value to normalize the pitch to
+ * - pitchColor:
  */
 
 
@@ -25,21 +26,30 @@ WaveSurfer.Drawer.CanvasPitch = Object.create(WaveSurfer.Drawer.Canvas);
 
 WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
 
+    defaultCanvasPitchParams: {
+        pitchColor     : '#F99',
+        pitchProgressColor : '#F00',
+        pitchTimeStart: 0,
+        pitchNormalizeTo: 'whole',
+        pitchPointHeight: 5,
+        pitchPointWidth: 2
+    },
+
+    //object variables that get manipulated by various object functions
     pitchTimeStart: 0,  //the start time of our wave according to pitch data
     pitchTimeEnd: -1,   //the end of our wave according to pitch data
-    pitchArray: [],     //raw array of pitch data from file
-    pitches: [],        //calculated pitches at points in our wave
+    pitchArray: [],     //array of pitch data objects containing time and pitch value
+    pitches: [],        //calculated average pitches at points in our wave
+
     /**
      * Initializes the pitch array. If params.pitchFileUrl is provided an ajax call will be
      * executed and drawing of the wave is delayed until pitch info is retrieved
      * @param params
      */
     initDrawer: function (params) {
+        this.params = WaveSurfer.util.extend(this.defaultCanvasPitchParams, this.params)
         var my = this;
 
-        if(typeof params.normalizePitchTo === 'undefined') {
-            this.params.normalizePitchTo = 'entire';
-        }
 
         //check to see if pitchTimeStart is set
         if(typeof params.pitchTimeStart !== 'undefined') {
@@ -78,7 +88,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
                 this.drawWave(peaks, 0, start, end);
 
             this.calculatePitches();
-            this.drawPitches();
+            this.drawPitches(0);
         }
         //wait for the pitch array to be loaded and then draw again
         else {
@@ -96,11 +106,13 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         var height = this.params.height * this.params.pixelRatio;
         var offsetY = height * channelIndex || 0;
 
-        this.waveCc.fillStyle = 'green';
+        this.waveCc.fillStyle = this.params.pitchColor;
+        this.progressCc.fillStyle = this.params.pitchProgressColor;
         for(var i in this.pitches) {
             var x = parseInt(i);
-            var y = this.pitches[i] * height + offsetY;
-            this.waveCc.fillRect(x, y, 1, 5);
+            var y = height - (this.params.pitchPointHeight + (this.pitches[i] * height)) + offsetY;
+            this.waveCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
+            this.progressCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
         }
 
     },
@@ -154,8 +166,9 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
             }
         }
 
+
         //normalize the pitches
-        if(this.params.normalizePitchTo == 'entire') {
+        if(this.params.normalizePitchTo == 'whole') {
             this.normalizePitches(minPitch, maxPitch);
         }
         else if(this.params.normalizePitchTo = 'segment') {
