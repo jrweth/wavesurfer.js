@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function () {
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'CanvasPitch',
+        renderer: 'Canvas',
+        waveSegmentRenderer: 'CanvasPitch',
         pitchFileUrl: 'transcripts/GoDownDeath.PitchTier.txt'
     };
 
@@ -82,12 +83,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    //set up listener for when wavesurfer is done
-    wavesurfer.on('ready', function() {
+    //set up handler to initialize the WaveSegment once the pitch array is retrieved
+    var initWaveSegment = function(pitchArray) {
+        delete options.pitchFileUrl;
+        options.pitchArray = pitchArray;
         //both elan and wavesurfer should be ready - so initialization of wave segments can now happen
         options.ELAN = elan;
         options.wavesurfer = wavesurfer;
+        options.pitchTimeEnd = wavesurfer.backend.getDuration();
+
         elanWaveSegment.init(options);
+    }
+
+    //set up listener for when wavesurfer is done
+    wavesurfer.on('ready', function() {
+        WaveSurfer.Drawer.CanvasPitch.loadPitchArrayFromFile(options.pitchFileUrl, initWaveSegment);
     });
 
 
