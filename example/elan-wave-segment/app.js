@@ -13,8 +13,8 @@ var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
 document.addEventListener('DOMContentLoaded', function () {
     var options = {
         container     : '#waveform',
-        waveColor     : 'blue',
-        progressColor : 'navy',
+        waveColor     : 'navy',
+        progressColor : 'blue',
         loaderColor   : 'purple',
         cursorColor   : 'navy',
         selectionColor: '#d0e9c6',
@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loopSelection : false,
         renderer: 'Canvas',
         waveSegmentRenderer: 'CanvasPitch',
+        waveSegmentHeight: 50,
         pitchFileUrl: 'transcripts/GoDownDeath.PitchTier.txt'
     };
 
