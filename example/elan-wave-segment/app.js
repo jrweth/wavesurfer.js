@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function () {
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'CanvasPitch'
+        renderer: 'CanvasPitch',
+        pitchFileUrl: 'transcripts/GoDownDeath.PitchTier.txt'
     };
 
     if (location.search.match('scroll')) {
@@ -69,14 +70,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    //set up listener for when wavesurfer is done
-    wavesurfer.on('ready', function() {
-        //both elan and wavesurfer should be ready - so initialization of wave segments can now happed
-        options.ELAN = elan;
-        options.wavesurfer = wavesurfer;
-        elanWaveSegment.init(options);
-    });
-
     // Init wavesurfer
     wavesurfer.init(options);
 
@@ -88,6 +81,16 @@ document.addEventListener('DOMContentLoaded', function () {
             'Line Text': true
         }
     });
+
+    //set up listener for when wavesurfer is done
+    wavesurfer.on('ready', function() {
+        //both elan and wavesurfer should be ready - so initialization of wave segments can now happen
+        options.ELAN = elan;
+        options.wavesurfer = wavesurfer;
+        elanWaveSegment.init(options);
+    });
+
+
 
     //setup progress updates for Elan and Elan Wave Segment
     var prevAnnotation, prevRow, region;

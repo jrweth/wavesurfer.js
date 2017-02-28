@@ -11,10 +11,11 @@
  * - Save as Text File (Save -> Save as Headerless Spreadsheet File)
  *
  * Params which should be sent in as initialization values are the following
- * - praatPitchFile:  (path to the generated PRAAT pitch tier file
- * - pitchStartTime:  (the start time of the pitch segment)
- * - pitchEndTime:    (the end time of the pitch segment)
- * - normalizePitchTo:  ([segment/entire/none] - what value to normalize the pitch to
+ * - pitchArray:             array of objects with time and pitch
+ * - pitchFileUrl:           url of the file that contains the pitch information
+ * - pitchTimeStart:         the time of the pitch file which corresponds with the first peak (defaults to 0)
+ * - pitchTimeEnd:           the time of the pitch file which corresponds with the last peak (defaults maximum pitch time)
+ * - normalizePitchTo:       [segment/entire/none] - what value to normalize the pitch to
  */
 
 
@@ -24,12 +25,209 @@ WaveSurfer.Drawer.CanvasPitch = Object.create(WaveSurfer.Drawer.Canvas);
 
 WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
 
+    pitchTimeStart: 0,  //the start time of our wave according to pitch data
+    pitchTimeEnd: -1,   //the end of our wave according to pitch data
+    pitchArray: [],     //raw array of pitch data from file
+    pitches: [],        //calculated pitches at points in our wave
     /**
-     * Initialize the pitch
+     * Initializes the pitch array. If params.pitchFileUrl is provided an ajax call will be
+     * executed and drawing of the wave is delayed until pitch info is retrieved
      * @param params
      */
     initDrawer: function (params) {
-        console.log('initializaing pitch');
+        var my = this;
+
+        if(typeof params.normalizePitchTo === 'undefined') {
+            this.params.normalizePitchTo = 'entire';
+        }
+
+        //check to see if pitchTimeStart is set
+        if(typeof params.pitchTimeStart !== 'undefined') {
+            this.pitchTimeStart = params.pitchTimeStart;
+        }
+
+        this.pitchArrayLoaded = false;
+        if (Array.isArray(params.pitchArray)) {
+            this.pitchArray = params.pitchArray;
+            this.pitchArrayLoaded = true;
+        }
+        //Need to load the pitch array from ajax with our callback
+        else {
+            var onPitchArrayLoaded = function (pitchArray) {
+                my.pitchArray = pitchArray;
+                my.pitchArrayLoaded = true;
+                my.fireEvent('pitch_array_loaded');
+            }
+            this.loadPitchArrayFromFile(params.pitchFileUrl, onPitchArrayLoaded);
+        }
+    },
+
+    /**
+     * Draw the peaks - make sure the pitchArray is loaded first
+     * @param peaks
+     * @param length
+     * @param start
+     * @param end
+     */
+    drawPeaks: function (peaks, length, start, end) {
+        if (this.pitchArrayLoaded == true) {
+            this.setWidth(length);
+
+            this.params.barWidth ?
+                this.drawBars(peaks, 0, start, end) :
+                this.drawWave(peaks, 0, start, end);
+
+            this.calculatePitches();
+            this.drawPitches();
+        }
+        //wait for the pitch array to be loaded and then draw again
+        else {
+            var my = this;
+            my.on('pitch-array-loaded', function () {
+                my.drawPeaks(peaks, length, start, end)
+            });
+        }
+    },
+
+    /**
+     * Loop through the calculated pitch values and actually draw them
+     */
+    drawPitches: function(channelIndex) {
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+
+        this.waveCc.fillStyle = 'green';
+        for(var i in this.pitches) {
+            var x = parseInt(i);
+            var y = this.pitches[i] * height + offsetY;
+            this.waveCc.fillRect(x, y, 1, 5);
+        }
 
     },
+
+    /**
+     * This function loops through the pitchArray and converts it to the pitches
+     * to be drawn on the canvas keyed by their position
+     */
+    calculatePitches: function() {
+        //reset pitches array
+        this.pitches = {};
+
+        //make sure we have our pitchTimeEnd
+        this.calculatePitchTimeEnd();
+
+        var pitchesForAverage = [];
+        var previousPosition = -1;
+        var maxPitch = 0;
+        var minPitch = 99999999999;
+        var maxSegmentPitch = 0;
+        var minSegmentPitch = 99999999999;
+        var duration = this.pitchTimeEnd - this.pitchTimeStart;
+
+        for(var i = 0; i < this.pitchArray.length; i++) {
+            var dataPoint = this.pitchArray[i];
+            if(dataPoint.pitch > maxPitch) maxPitch = dataPoint.pitch;
+            if(dataPoint.pitch < minPitch) minPitch = dataPoint.pitch;
+
+            //make sure we are in the specified range
+            if(dataPoint.time >= this.pitchTimeStart && dataPoint.time <= this.pitchTimeEnd) {
+                var pitchPosition = Math.round(this.width * (dataPoint.time - this.pitchTimeStart) / duration);
+
+                pitchesForAverage.push(dataPoint.pitch);
+
+                //if we have moved on to a new position in our wave record average and reset previousPosition
+                if(pitchPosition !== previousPosition) {
+                    if(pitchesForAverage.length > 0) {
+                        //get the average pitch for this point
+                        var avgPitch = this.avg(pitchesForAverage);
+
+                        //check for min max
+                        if(avgPitch > maxSegmentPitch) maxSegmentPitch = avgPitch;
+                        if(avgPitch < minSegmentPitch) minSegmentPitch = avgPitch;
+
+                        //add pitch to the position
+                        this.pitches[previousPosition] = avgPitch;
+                        pitchesForAverage = [];
+                    }
+                }
+                previousPosition = pitchPosition;
+            }
+        }
+
+        //normalize the pitches
+        if(this.params.normalizePitchTo == 'entire') {
+            this.normalizePitches(minPitch, maxPitch);
+        }
+        else if(this.params.normalizePitchTo = 'segment') {
+            this.normalizePitches(minSegmentPitch, maxSegmentPitch);
+        }
+    },
+
+    normalizePitches: function(min, max) {
+        for(var i in this.pitches) {
+            this.pitches[i] = (this.pitches[i] - min) / (max - min);
+        }
+    },
+    /**
+     *
+     */
+
+    /**
+     * Function to load the pitch array from a praat pitch tier text file via ajax
+     *
+     * The text file should contain a series of lines.
+     * Each line should contain [audio time] [tab character] [pitch value]
+     * e.g. "1.2355 [tab] 124.2321"
+     * The file format can be generated by PRAAT open source audio editor
+     *
+     * @param pitchFileUrl  url of the praat pitch tier file
+     * @param onSuccess          function to run on success
+     */
+    loadPitchArrayFromFile(pitchFileUrl, onSuccess) {
+        var pitchArray = [];
+        //Load the pitch file
+        var options = {
+            url: pitchFileUrl,
+            responseType: 'text'
+        };
+        var fileAjax = WaveSurfer.util.ajax(options);
+
+        fileAjax.on('load', function (data) {
+            if (data.currentTarget.status == 200) {
+                //split the file by line endings
+                var pitchLines = data.currentTarget.responseText.split("\n");
+                //loop through each line and find the time and pitch values (delimited by tab)
+                for (var i = 0; i < pitchLines.length; i++) {
+                    var pitchParts = pitchLines[i].split("\t");
+                    if(pitchParts.length == 2) {
+                        pitchArray.push({time: parseFloat(pitchParts[0]), pitch: parseFloat(pitchParts[1])});
+                    }
+                }
+                //run success function
+                onSuccess(pitchArray);
+            }
+        });
+    },
+
+
+    calculatePitchTimeEnd: function() {
+        if(typeof this.params.pitchTimeEnd !== 'undefined') {
+            this.pitchTimeEnd = this.params.pitchTimeEnd;
+        }
+        else {
+            this.pitchTimeEnd = this.pitchArray[this.pitchArray.length -1].time;
+        }
+    },
+
+    /**
+     * Quick convenience function to average numbers in an array
+     * @param values
+     * @returns {number}
+     */
+    avg: function(values) {
+        var sum = values.reduce(function(a,b) {return a+b;});
+        return sum/values.length;
+    }
 });
+
+WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, WaveSurfer.Observer);
