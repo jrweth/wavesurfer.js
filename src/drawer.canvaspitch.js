@@ -27,11 +27,11 @@ WaveSurfer.Drawer.CanvasPitch = Object.create(WaveSurfer.Drawer.Canvas);
 WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
 
     defaultCanvasPitchParams: {
-        pitchColor     : '#F99',
+        pitchColor     : '#f63',
         pitchProgressColor : '#F00',
         pitchTimeStart: 0,
         pitchNormalizeTo: 'whole',
-        pitchPointHeight: 5,
+        pitchPointHeight: 2,
         pitchPointWidth: 2
     },
 
@@ -82,13 +82,22 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
     drawPeaks: function (peaks, length, start, end) {
         if (this.pitchArrayLoaded == true) {
             this.setWidth(length);
+            this.params.height = this.params.height / 2;
 
             this.params.barWidth ?
                 this.drawBars(peaks, 0, start, end) :
                 this.drawWave(peaks, 0, start, end);
 
             this.calculatePitches();
-            this.drawPitches(0);
+            this.drawPitches(1);
+
+            //draw the separators between the
+            this.waveCc.fillStyle = 'black';
+            this.waveCc.fillRect(0, 0, this.width, 1);
+            this.waveCc.fillRect(0, this.params.height, this.width, 1);
+            this.waveCc.fillRect(0, this.params.height*2 - 1, this.width, 1);
+            this.waveCc.fillRect(0, 0, 1, this.params.height*2);
+            this.waveCc.fillRect(this.width - 1, 0, 1, this.params.height*2);
         }
         //wait for the pitch array to be loaded and then draw again
         else {
@@ -106,11 +115,12 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         var height = this.params.height * this.params.pixelRatio;
         var offsetY = height * channelIndex || 0;
 
+
         this.waveCc.fillStyle = this.params.pitchColor;
         this.progressCc.fillStyle = this.params.pitchProgressColor;
         for(var i in this.pitches) {
             var x = parseInt(i);
-            var y = height - (this.params.pitchPointHeight + (this.pitches[i] * height)) + offsetY;
+            var y = offsetY + (height - this.params.pitchPointHeight) - (this.pitches[i] * (height - this.params.pitchPointHeight));
             this.waveCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
             this.progressCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
         }
