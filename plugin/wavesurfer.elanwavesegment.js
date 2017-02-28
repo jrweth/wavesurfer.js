@@ -128,7 +128,9 @@ WaveSurfer.ELANWaveSegment = {
 
         var drawerParams = {
             fillParent: true,
-            height: this.params.waveSegmentHeight
+            height: this.params.waveSegmentHeight,
+            pitchTimeStart: line.start,
+            pitchTimeEnd: line.end
         }
         drawerParams = WaveSurfer.util.extend({}, this.params, drawerParams);
         this.waveSegments[elanIndex].init(container, drawerParams);
