@@ -23,3 +23,15 @@ td.wavesurfer-tier-Comments {
 .wavesurfer-handle {
     background-color: #c9e2b3;
 }
+
+span.elan-word-finished {
+    color: navy;
+}
+
+span.elan-word-pending {
+    color: grey;
+}
+
+span.elan-word-current {
+    color: red;
+}

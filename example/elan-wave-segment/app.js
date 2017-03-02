@@ -4,7 +4,7 @@
 var wavesurfer = Object.create(WaveSurfer);
 
 // Create elan instance
-var elan = Object.create(WaveSurfer.ELAN);
+var elan = Object.create(WaveSurfer.ElanStanzaLineWord);
 
 // Create Elan Wave Segment instance
 var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderer: 'Canvas',
         waveSegmentRenderer: 'CanvasPitch',
         waveSegmentHeight: 50,
-        pitchFileUrl: 'transcripts/GoDownDeath.PitchTier.txt'
+        pitchFileUrl: 'transcripts/i_know_a_man.PitchTier.txt'
     };
 
     if (location.search.match('scroll')) {
@@ -63,7 +63,8 @@ document.addEventListener('DOMContentLoaded', function () {
     //set up listener for when elan is done
     elan.on('ready', function (data) {
         //go load the wave form
-        wavesurfer.load('transcripts/GoDownDeath.mp3');
+        //wavesurfer.load('transcripts/GoDownDeath.mp3');
+        wavesurfer.load('transcripts/i_know_a_man.mp3');
 
         //add some styling to elan table
         var classList = elan.container.querySelector('table').classList;
@@ -77,7 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     //init elan
     elan.init({
-        url: 'transcripts/GoDownDeath.xml',
+        //url: 'transcripts/GoDownDeath.xml',
+        url: 'transcripts/i_know_a_man.xml',
         container: '#annotations',
         tiers: {
             'Line Text': true
@@ -104,9 +106,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     //setup progress updates for Elan and Elan Wave Segment
-    var prevAnnotation, prevRow, region;
+    var prevAnnotation, prevRow, region, prevWord;
     var onProgress = function (time) {
         var annotation = elan.getRenderedAnnotation(time);
+        var word = elan.getWordAtTime(time);
 
         elanWaveSegment.onProgress(time);
 
@@ -134,6 +137,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     resize: false,
                     color: 'rgba(223, 240, 216, 0.7)'
                 });
+            }
+        }
+
+        if(prevWord != word) {
+            prevWord = word;
+
+            var words = document.getElementsByClassName('wavesurfer-elan-word');
+            for(var i = 0; i < words.length; i++) {
+                //clear out all previous highlighting
+                words[i].classList.remove('elan-word-pending');
+                words[i].classList.remove('elan-word-current');
+                words[i].classList.remove('elan-word-finished');
+
+                var start = parseFloat(words[i].getAttribute('data-start'));
+                var end = parseFloat(words[i].getAttribute('data-end'));
+
+                if(end < time) words[i].classList.add('elan-word-finished');
+                else if(start > time) words[i].classList.add('elan-word-pending');
+                else (words[i].classList.add('elan-word-current'));
+
+                console.log('set');
             }
         }
     };
