@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'Canvas',
+        renderer: 'CanvasPitch',
         waveSegmentRenderer: 'CanvasPitch',
         waveSegmentHeight: 50,
         pitchFileUrl: 'transcripts/i_know_a_man.PitchTier.txt'
@@ -157,7 +157,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 else if(start > time) words[i].classList.add('elan-word-pending');
                 else (words[i].classList.add('elan-word-current'));
 
-                console.log('set');
             }
         }
     };

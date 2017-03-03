@@ -42,7 +42,6 @@ WaveSurfer.ELANWaveSegment = {
         var max = WaveSurfer.util.max(peaks);
         var min = WaveSurfer.util.min(peaks);
         this.maxPeak = -min > max ? -min : max;
-        console.log(this.maxPeak);
     },
 
     /**
@@ -126,13 +125,13 @@ WaveSurfer.ELANWaveSegment = {
         var peaks = this.getPeaksForTimeSegment(line.start, line.end);
         this.waveSegments[elanIndex] = Object.create(WaveSurfer.Drawer[this.params.waveSegmentRenderer]);
 
-        var drawerParams = {
-            fillParent: true,
-            height: this.params.waveSegmentHeight,
-            pitchTimeStart: line.start,
-            pitchTimeEnd: line.end
-        }
-        drawerParams = WaveSurfer.util.extend({}, this.params, drawerParams);
+
+        var drawerParams = this.params;
+        drawerParams.fillParent = true;
+        drawerParams.height = this.params.waveSegmentHeight;
+        drawerParams.pitchTimeStart = line.start;
+        drawerParams.pitchTimeEnd = line.end;
+
         this.waveSegments[elanIndex].init(container, drawerParams);
         this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length/2);
 

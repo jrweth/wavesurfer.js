@@ -15,7 +15,7 @@
  * - pitchFileUrl:           url of the file that contains the pitch information (required unless pitchArray is set)
  * - pitchTimeStart:         the time of the pitch file which corresponds with the start of the displayed wave (defaults to 0)
  * - pitchTimeEnd:           the time of the pitch file which corresponds with the end of the displayed wave (defaults maximum pitch time)
- * - normalizePitchTo:       [whole/segment/none] - what value to normalize the pitch to
+ * - normalizePitchTo:       [whole/segment/none/values] - what value to normalize the pitch to
  * - pitchColor:
  */
 
@@ -30,9 +30,12 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         pitchColor     : '#f63',
         pitchProgressColor : '#F00',
         pitchTimeStart: 0,
-        pitchNormalizeTo: 'whole',
+        pitchNormalizeTo: 'values',
+        pitchMin: 70,
+        pitchMax: 200,
         pitchPointHeight: 2,
-        pitchPointWidth: 2
+        pitchPointWidth: 2,
+        splitChannels: false,
     },
 
     //object variables that get manipulated by various object functions
@@ -47,13 +50,16 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
      * @param params
      */
     initDrawer: function (params) {
-        this.params = WaveSurfer.util.extend(this.defaultCanvasPitchParams, this.params)
+        this.params = WaveSurfer.util.extend(this.defaultCanvasPitchParams, params)
         var my = this;
 
 
         //check to see if pitchTimeStart is set
-        if(typeof params.pitchTimeStart !== 'undefined') {
-            this.pitchTimeStart = params.pitchTimeStart;
+        this.pitchTimeStart = this.params.pitchTimeStart;
+
+        //check to see if pitchTimeStart is set
+        if(this.params.pitchTimeEnd !== undefined) {
+            this.pitchTimeEnd = this.params.pitchTimeEnd;
         }
 
         this.pitchArrayLoaded = false;
@@ -81,7 +87,10 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
      */
     drawPeaks: function (peaks, length, start, end) {
         if (this.pitchArrayLoaded == true) {
+
+            //adjust height to split into wave and pitch channels
             this.setWidth(length);
+            this.setHeight(2 * this.params.height);
             this.params.height = this.params.height / 2;
 
             this.params.barWidth ?
@@ -98,6 +107,10 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
             this.waveCc.fillRect(0, this.params.height*2 - 1, this.width, 1);
             this.waveCc.fillRect(0, 0, 1, this.params.height*2);
             this.waveCc.fillRect(this.width - 1, 0, 1, this.params.height*2);
+
+            //set height back
+            //this.params.height = this.params.height * 2;
+            this.params.pixelRatio = 2;
         }
         //wait for the pitch array to be loaded and then draw again
         else {
@@ -176,19 +189,24 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
             }
         }
 
-
         //normalize the pitches
-        if(this.params.normalizePitchTo == 'whole') {
+        if(this.params.pitchNormalizeTo == 'whole') {
             this.normalizePitches(minPitch, maxPitch);
         }
-        else if(this.params.normalizePitchTo = 'segment') {
+        else if(this.params.pitchNormalizeTo == 'values') {
+            this.normalizePitches(this.params.pitchMin, this.params.pitchMax)
+        }
+        else {
             this.normalizePitches(minSegmentPitch, maxSegmentPitch);
         }
     },
 
     normalizePitches: function(min, max) {
         for(var i in this.pitches) {
-            this.pitches[i] = (this.pitches[i] - min) / (max - min);
+            var pitch = (this.pitches[i] - min) / (max - min);
+            if(pitch > 1) pitch = 1;
+            if(pitch < 0) pitch = 0;
+            this.pitches[i] = pitch;
         }
     },
     /**
