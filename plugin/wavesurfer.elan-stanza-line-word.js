@@ -73,12 +73,22 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
         th.textContent = 'Line';
         headRow.appendChild(th);
 
-        // body
-        var tbody = document.createElement('tbody');
-        table.appendChild(tbody);
 
         //loop through each stanza
         this.data.stanzas.forEach(function (stanza) {
+
+            // body
+            var tbody = document.createElement('tbody');
+            tbody.className = "elan-stanza";
+            table.appendChild(tbody);
+            //add a stanza header row
+
+            var stanzaHeaderRow = document.createElement('tr');
+            stanzaHeaderRow.className = 'elan-wavesurfer-stanza-row';
+            var td = document.createElement('td');
+            td.colSpan = 3;
+            stanzaHeaderRow.appendChild(td);
+            tbody.appendChild(stanzaHeaderRow);
 
             //loop through each line and create a table row
             stanza.lines.forEach(function(line) {
@@ -98,6 +108,7 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
                 //add the line column
                 var td = document.createElement('td');
                 td.dataset.ref = line.id;
+                td.className = 'wavesurfer-elan-line'
 
                 //loop through words and add a span for each word
                 line.words.forEach(function (word) {

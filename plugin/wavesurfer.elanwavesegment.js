@@ -119,6 +119,7 @@ WaveSurfer.ELANWaveSegment = {
 
         container.style.width = width.toString() + 'px';
         container.style.height = this.params.waveSegmentHeight.toString() + 'px';
+        container.className = "elan-wavesegment-container";
 
         el.appendChild(container);
 
@@ -131,9 +132,12 @@ WaveSurfer.ELANWaveSegment = {
         drawerParams.height = this.params.waveSegmentHeight;
         drawerParams.pitchTimeStart = line.start;
         drawerParams.pitchTimeEnd = line.end;
+        drawerParams.fillParent = true;
+        drawerParams.piexelRatio = 2;
 
+        console.log(drawerParams);
         this.waveSegments[elanIndex].init(container, drawerParams);
-        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length/2);
+        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length);
 
         this.waveSegments[elanIndex].updateProgress(0);
 

@@ -90,23 +90,14 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
 
             //adjust height to split into wave and pitch channels
             this.setWidth(length);
-            this.setHeight(2 * this.params.height);
-            this.params.height = this.params.height / 2;
 
             this.params.barWidth ?
                 this.drawBars(peaks, 0, start, end) :
-                this.drawWave(peaks, 0, start, end);
+                this.drawWave(peaks, 1, start, end);
 
             this.calculatePitches();
-            this.drawPitches(1);
+            this.drawPitches(0);
 
-            //draw the separators between the
-            this.waveCc.fillStyle = 'black';
-            this.waveCc.fillRect(0, 0, this.width, 1);
-            this.waveCc.fillRect(0, this.params.height, this.width, 1);
-            this.waveCc.fillRect(0, this.params.height*2 - 1, this.width, 1);
-            this.waveCc.fillRect(0, 0, 1, this.params.height*2);
-            this.waveCc.fillRect(this.width - 1, 0, 1, this.params.height*2);
 
             //set height back
             //this.params.height = this.params.height * 2;
@@ -121,11 +112,75 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         }
     },
 
+    drawWave: function (peaks, channelIndex, start, end) {
+        var my = this;
+
+
+        // Support arrays without negative peaks
+        var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
+        if (!hasMinValues) {
+            var reflectedPeaks = [];
+            for (var i = 0, len = peaks.length; i < len; i++) {
+                reflectedPeaks[2 * i] = peaks[i];
+                reflectedPeaks[2 * i + 1] = -peaks[i];
+            }
+            peaks = reflectedPeaks;
+        }
+
+        // A half-pixel offset makes lines crisp
+        var $ = 0.5 / this.params.pixelRatio;
+        var height = this.params.height * this.params.pixelRatio / 2;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+        var length = ~~(peaks.length / 2);
+
+        var scale = 1;
+        if (this.params.fillParent && this.width != length) {
+            scale = this.width / length;
+        }
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            var max = WaveSurfer.util.max(peaks);
+            var min = WaveSurfer.util.min(peaks);
+            absmax = -min > max ? -min : max;
+        }
+
+        this.waveCc.fillStyle = this.params.waveColor;
+        if (this.progressCc) {
+            this.progressCc.fillStyle = this.params.progressColor;
+        }
+
+        [ this.waveCc, this.progressCc ].forEach(function (cc) {
+            if (!cc) { return; }
+
+            cc.beginPath();
+            cc.moveTo(start * scale + $, halfH + offsetY);
+
+            for (var i = start; i < end; i++) {
+                var h = Math.round(peaks[2 * i] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            // Draw the bottom edge going backwards, to make a single
+            // closed hull to fill.
+            for (var i = end - 1; i >= start; i--) {
+                var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            cc.closePath();
+            cc.fill();
+
+            // Always draw a median line
+            cc.fillRect(0, halfH + offsetY - $, this.width, $);
+        }, this);
+    },
     /**
      * Loop through the calculated pitch values and actually draw them
      */
     drawPitches: function(channelIndex) {
-        var height = this.params.height * this.params.pixelRatio;
+        var height = this.params.height * this.params.pixelRatio / 2;
         var offsetY = height * channelIndex || 0;
 
 

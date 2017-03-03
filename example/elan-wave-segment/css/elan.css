@@ -35,3 +35,20 @@ span.elan-word-pending {
 span.elan-word-current {
     color: red;
 }
+div.elan-wavesegment-container {
+    border: 1px solid black;
+}
+
+
+tbody.elan-stanza:nth-of-type(even) /*td.wavesurfer-elan-line*/
+{
+    background-color: white;
+}
+
+table.wavesurfer-annotations
+{
+    border-collapse: collapse;
+}
+tr.elan-wavesurfer-stanza-row {
+    height: 30px;
+}

@@ -23,7 +23,10 @@ document.addEventListener('DOMContentLoaded', function () {
         renderer: 'CanvasPitch',
         waveSegmentRenderer: 'CanvasPitch',
         waveSegmentHeight: 50,
-        pitchFileUrl: 'transcripts/i_know_a_man.PitchTier.txt'
+        pitchFileUrl: 'transcripts/i_know_a_man.PitchTier.txt',
+        pitchPointWidth: 5,
+        pitchPointHeight: 5,
+        height: 300
     };
 
     if (location.search.match('scroll')) {
@@ -95,6 +98,8 @@ document.addEventListener('DOMContentLoaded', function () {
         options.wavesurfer = wavesurfer;
         options.pitchTimeEnd = wavesurfer.backend.getDuration();
 
+        options.pitchPointWidth = 2;
+        options.pitchPointHeight = 2;
         elanWaveSegment.init(options);
     }
 
