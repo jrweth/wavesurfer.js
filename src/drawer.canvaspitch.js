@@ -93,15 +93,11 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
 
             this.params.barWidth ?
                 this.drawBars(peaks, 0, start, end) :
-                this.drawWave(peaks, 1, start, end);
+                this.drawWave(peaks, 0, start, end);
 
             this.calculatePitches();
-            this.drawPitches(0);
+            this.drawPitches();
 
-
-            //set height back
-            //this.params.height = this.params.height * 2;
-            this.params.pixelRatio = 2;
         }
         //wait for the pitch array to be loaded and then draw again
         else {
@@ -112,9 +108,44 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         }
     },
 
+    /**
+     * Loop through the calculated pitch values and actually draw them
+     */
+    drawPitches: function() {
+        var height = this.params.height * this.params.pixelRatio /2;
+        var offsetY = height / 2;
+
+        console.log(height);
+        console.log(offsetY);
+
+        this.waveCc.fillStyle = this.params.pitchColor;
+        this.progressCc.fillStyle = this.params.pitchProgressColor;
+        for(var i in this.pitches) {
+            var x = parseInt(i);
+            var y = height - this.params.pitchPointHeight - (this.pitches[i] * (height - this.params.pitchPointHeight));
+            this.waveCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
+            this.progressCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
+        }
+
+    },
+
+
+
     drawWave: function (peaks, channelIndex, start, end) {
         var my = this;
-
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(function(channelPeaks, i) {
+                    my.drawWave(channelPeaks, i, start, end);
+                });
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
 
         // Support arrays without negative peaks
         var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
@@ -129,8 +160,13 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
 
         // A half-pixel offset makes lines crisp
         var $ = 0.5 / this.params.pixelRatio;
-        var height = this.params.height * this.params.pixelRatio / 2;
+        var height = this.params.height * this.params.pixelRatio;
         var offsetY = height * channelIndex || 0;
+
+        //change offset and height to be on the bottom half
+        offsetY += height/2;
+        height = height/2;
+
         var halfH = height / 2;
         var length = ~~(peaks.length / 2);
 
@@ -175,24 +211,6 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
             // Always draw a median line
             cc.fillRect(0, halfH + offsetY - $, this.width, $);
         }, this);
-    },
-    /**
-     * Loop through the calculated pitch values and actually draw them
-     */
-    drawPitches: function(channelIndex) {
-        var height = this.params.height * this.params.pixelRatio / 2;
-        var offsetY = height * channelIndex || 0;
-
-
-        this.waveCc.fillStyle = this.params.pitchColor;
-        this.progressCc.fillStyle = this.params.pitchProgressColor;
-        for(var i in this.pitches) {
-            var x = parseInt(i);
-            var y = offsetY + (height - this.params.pitchPointHeight) - (this.pitches[i] * (height - this.params.pitchPointHeight));
-            this.waveCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
-            this.progressCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
-        }
-
     },
 
     /**
