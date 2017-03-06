@@ -26,7 +26,8 @@ document.addEventListener('DOMContentLoaded', function () {
         pitchFileUrl: 'transcripts/i_know_a_man.PitchTier.txt',
         pitchPointWidth: 5,
         pitchPointHeight: 5,
-        height: 300
+        height: 300,
+        scrollParent: true
     };
 
     if (location.search.match('scroll')) {
