@@ -112,7 +112,7 @@ WaveSurfer.ELANWaveSegment = {
 
 
     //append the wave segment defined by the elanIndex to the element
-    appendWaveSegmentToElement(el, elanIndex) {
+    appendWaveSegmentToElement: function(el, elanIndex) {
         var line = this.ELAN.renderedAlignable[elanIndex];
         var container = document.createElement('div');
         var width = this.params.waveSegmentWidth;

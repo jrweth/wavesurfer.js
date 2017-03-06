@@ -279,7 +279,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
      * @param pitchFileUrl  url of the praat pitch tier file
      * @param onSuccess          function to run on success
      */
-    loadPitchArrayFromFile(pitchFileUrl, onSuccess) {
+    loadPitchArrayFromFile: function(pitchFileUrl, onSuccess) {
         var pitchArray = [];
         //Load the pitch file
         var options = {
