@@ -100,7 +100,7 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
                 //add the time column
                 var td = document.createElement('td');
                 td.className = 'wavesurfer-time';
-                td.textContent = line.start.toFixed(1) + '–' +
+                td.innerHTML = line.start.toFixed(1) + '&mdash;' +
                     line.end.toFixed(1);
                 td.dataset.ref = line.id;
                 row.appendChild(td);
