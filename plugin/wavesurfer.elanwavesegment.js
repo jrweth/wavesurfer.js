@@ -133,9 +133,7 @@ WaveSurfer.ELANWaveSegment = {
         drawerParams.pitchTimeStart = line.start;
         drawerParams.pitchTimeEnd = line.end;
         drawerParams.fillParent = true;
-        drawerParams.piexelRatio = 2;
 
-        console.log(drawerParams);
         this.waveSegments[elanIndex].init(container, drawerParams);
         this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length);
 
