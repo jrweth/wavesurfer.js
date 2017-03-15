@@ -35,7 +35,9 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         pitchMax: 200,
         pitchPointHeight: 2,
         pitchPointWidth: 2,
-        splitChannels: false,
+        waveSeparator: true,
+        waveSeparatorColor: 'black',
+        waveDrawMedianLine: true
     },
 
     //object variables that get manipulated by various object functions
@@ -50,9 +52,13 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
      * @param params
      */
     initDrawer: function (params) {
-        this.params = WaveSurfer.util.extend(this.defaultCanvasPitchParams, params)
         var my = this;
 
+        for(var paramName in this.defaultCanvasPitchParams) {
+            if(this.params[paramName] === undefined) {
+                this.params[paramName] = this.defaultCanvasPitchParams[paramName];
+            }
+        }
 
         //check to see if pitchTimeStart is set
         this.pitchTimeStart = this.params.pitchTimeStart;
@@ -115,8 +121,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
         var height = this.params.height * this.params.pixelRatio /2;
         var offsetY = height / 2;
 
-        console.log(height);
-        console.log(offsetY);
+        var $ = 0.5 / this.params.pixelRatio;
 
         this.waveCc.fillStyle = this.params.pitchColor;
         this.progressCc.fillStyle = this.params.pitchProgressColor;
@@ -125,8 +130,16 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
             var y = height - this.params.pitchPointHeight - (this.pitches[i] * (height - this.params.pitchPointHeight));
             this.waveCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
             this.progressCc.fillRect(x, y, this.params.pitchPointWidth, this.params.pitchPointHeight);
+
         }
 
+        //draw line to separate the two waves
+        if(this.params.waveSeparator) {
+            this.waveCc.fillStyle = this.params.waveSeparatorColor;
+            this.waveCc.fillRect(0, height, this.width, $);
+            this.progressCc.fillStyle = this.params.waveSeparatorColor;
+            this.progressCc.fillRect(0, height, this.width, $);
+        }
     },
 
 
@@ -209,7 +222,9 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.CanvasPitch, {
             cc.fill();
 
             // Always draw a median line
-            cc.fillRect(0, halfH + offsetY - $, this.width, $);
+            if(this.params.waveDrawMedianLine) {
+                cc.fillRect(0, halfH + offsetY - $, this.width, $);
+            }
         }, this);
     },
 
