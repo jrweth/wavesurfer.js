@@ -3,6 +3,12 @@ WaveSurfer.ElanStanzaLineWord = Object.create(WaveSurfer.ELAN);
 
 WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
 
+    //variables for maintaining state
+    currentAnnotation: null,
+    currentRow: null,
+    currentRegion: null,
+    currentWord: null,
+
 
     parseElan: function (xml) {
         var data = WaveSurfer.ELAN.parseElan(xml);
@@ -144,6 +150,89 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
         });
         return result;
     },
+
+
+    /**
+     * Function to run when the current time of the media file is progressed
+     * @param time
+     */
+    onProgress: function (time, wavesurfer) {
+        this.updateCurrentLine(time, wavesurfer);
+        this.updateCurrentWord(time);
+
+    },
+
+    updateCurrentLine: function(time, wavesurfer) {
+        var annotation = this.getRenderedAnnotation(time);
+
+
+        if (this.currentAnnotation != annotation) {
+            this.currentAnnotation = annotation;
+
+            this.currentRegion && this.currentRegion.remove();
+            this.currentRegion = null;
+
+            if (annotation) {
+                // Highlight annotation table row
+                var row = this.getAnnotationNode(annotation);
+                this.currentRow && this.currentRow.classList.remove('success');
+                this.currentRow = row;
+                row.classList.add('success');
+
+                this.scrollToRow(row);
+
+                // Region
+                this.currentRegion = wavesurfer.addRegion({
+                    start: annotation.start,
+                    end: annotation.end,
+                    resize: false,
+                    color: 'rgba(223, 240, 216, 0.7)'
+                });
+            }
+        }
+
+    },
+
+    //scroll our container to make sure that the provided row is not off the bottom of the screen
+    //this assumes that the container containing our annotation table is in a div that scrolls
+    scrollToRow: function(row)
+    {
+        var maxHeight =  window.innerHeight - this.container.getBoundingClientRect().top;
+        if(
+            row.offsetTop + row.clientHeight > this.container.scrollTop + maxHeight
+            || row.offsetTop < this.container.scrollTop
+        ) {
+            this.container.scrollTop = row.offsetTop;
+        }
+    },
+
+    //function to set the class for all words depending on the current time provided
+    updateCurrentWord: function(time) {
+        var word = this.getWordAtTime(time);
+
+        //make sure that we have had a change
+        if(this.currentWord != word) {
+            this.currentWord = word;
+
+            //get all the words in the DOM
+            var words = document.getElementsByClassName('wavesurfer-elan-word');
+            for(var i = 0; i < words.length; i++) {
+                //clear out all previous highlighting
+                words[i].classList.remove('elan-word-pending');
+                words[i].classList.remove('elan-word-current');
+                words[i].classList.remove('elan-word-finished');
+
+                var start = parseFloat(words[i].getAttribute('data-start'));
+                var end = parseFloat(words[i].getAttribute('data-end'));
+
+                //check if the word is finished, current or pending and set class accordingly
+                if(end < time) words[i].classList.add('elan-word-finished');
+                else if(start > time) words[i].classList.add('elan-word-pending');
+                else (words[i].classList.add('elan-word-current'));
+
+            }
+        }
+    }
 
 });
 
