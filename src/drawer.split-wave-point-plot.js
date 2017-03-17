@@ -10,23 +10,26 @@
  *
  *
  * Params which can be sent in as initialization values are the following
- * - plotArray:             array of objects with time and plot (required unless plotFileUrl is set)
- * - plotFileUrl:           url of the file that contains the plot information (required unless plotArray is set)
- * - plotNormalizeTo:       [whole/segment/none/values] - what value to normalize the plot to (defaults to "whole")
- * - plotMin:               the minimum value to normalize points to.  Any value below this will be ignored (defaults to 0)
- * - plotMax:               the maximum value to normalize points to.  Any value above this will be ignored (defaults to 1)
- * - plotTimeStart:         the time included in the plot file which corresponds with the start of the displayed wave (defaults to 0)
- * - plotTimeEnd:           the time included in the plot file which corresponds with the end of the displayed wave (defaults maximum plot time)
- * - plotColor:             the color of the plot (defaults to #f63)
- * - plotProgressColor :    the color of the progress plot (defaults to '#F00')
- * - plotFileDelimiter:     the delimiter which separates the time from the value in the plot file (defaults to tab characater = "\t")
- * - plotPointHeight:       the canvas height of each plot point (defaults to 2)
- * - plotPointWidth:        the canvas width of each plot point (defaults to 2)
- * - plotSeparator:         boolean indicating a separator should be included between the wave and point plot
- * - plotRangeDisplay:      boolean indicating if the min and max range should be displayeda (defaults to false)
- * - plotRangePrecision:    integer determining the precision of the displayed plot range
- * - plotRangeUnits:        units appended to the range
- * - waveDrawMedianLine:    boolean indicating if the median line should be drawn for the wave form
+ * - plotArray:               array of objects with time and plot (required unless plotFileUrl is set)
+ * - plotFileUrl:             url of the file that contains the plot information (required unless plotArray is set)
+ * - plotNormalizeTo:         [whole/segment/none/values] - what value to normalize the plot to (defaults to "whole")
+ * - plotMin:                 the minimum value to normalize points to.  Any value below this will be ignored (defaults to 0)
+ * - plotMax:                 the maximum value to normalize points to.  Any value above this will be ignored (defaults to 1)
+ * - plotTimeStart:           the time included in the plot file which corresponds with the start of the displayed wave (defaults to 0)
+ * - plotTimeEnd:             the time included in the plot file which corresponds with the end of the displayed wave (defaults maximum plot time)
+ * - plotColor:               the color of the plot (defaults to #f63)
+ * - plotProgressColor :      the color of the progress plot (defaults to '#F00')
+ * - plotFileDelimiter:       the delimiter which separates the time from the value in the plot file (defaults to tab characater = "\t")
+ * - plotPointHeight:         the canvas height of each plot point (defaults to 2)
+ * - plotPointWidth:          the canvas width of each plot point (defaults to 2)
+ * - plotSeparator:           boolean indicating a separator should be included between the wave and point plot
+ * - plotRangeDisplay:        boolean indicating if the min and max range should be displayeda (defaults to false)
+ * - plotRangePrecision:      integer determining the precision of the displayed plot range
+ * - plotRangeUnits:          units appended to the range
+ * - plotRangeFontSize:       the font for displaying the range - defaults to 20
+ * - plotRangeFontType:       the font type for displaying range - defaults to Ariel
+ * - plotRangeIgnoreOutliers: boolean indicating if values outside of range should be ignored or plotted at min/max
+ * - waveDrawMedianLine:      boolean indicating if the median line should be drawn for the wave form
  */
 
 
@@ -51,6 +54,8 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         plotRangeUnits: '',
         plotRangePrecision: 4,
         plotRangeIgnoreOutliers: false,
+        plotRangeFontSize: 12,
+        plotRangeFontType: 'Ariel',
         waveDrawMedianLine: true,
         plotFileDelimiter:  '\t'
     },
@@ -104,7 +109,9 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
     },
 
     /**
-     * Draw the peaks - make sure the plotArray is loaded first
+     * Draw the peaks - this overrides the drawer.js function and does the following additional steps
+     * - ensures that the plotArray has already been loaded, if not it loads via ajax
+     * - moves the wave form to where channel 1 would normally be
      * @param peaks
      * @param length
      * @param start
@@ -116,9 +123,19 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
 
             this.setWidth(length);
 
+            //fake that we are splitting channels
+            this.splitChannels = true;
+            this.params.height = this.params.height/2;
+            if (peaks[0] instanceof Array) {
+               peaks = peaks[0];
+            }
+
             this.params.barWidth ?
-                this.drawBars(peaks, 0, start, end) :
-                this.drawWave(peaks, 0, start, end);
+                this.drawBars(peaks, 1, start, end) :
+                this.drawWave(peaks, 1, start, end);
+
+            //set the height back to the original
+            this.params.height = this.params.height*2;
 
             this.calculatePlots();
             this.drawPlots();
@@ -133,11 +150,14 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         }
     },
 
+
+
+
     /**
      * Loop through the calculated plot values and actually draw them
      */
     drawPlots: function() {
-        var height = this.params.height * this.params.pixelRatio /2;
+        var height = this.params.height * this.params.pixelRatio / 2;
 
         var $ = 0.5 / this.params.pixelRatio;
 
@@ -168,102 +188,15 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
 
 
     /**
-     * This function basically override the Drawer.Canvas drawWave but shifts everything down to the lower half of the
-     * of the canvas
-     */
-    drawWave: function (peaks, channelIndex, start, end) {
-        var my = this;
-        // Split channels
-        if (peaks[0] instanceof Array) {
-            var channels = peaks;
-            if (this.params.splitChannels) {
-                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
-                channels.forEach(function(channelPeaks, i) {
-                    my.drawWave(channelPeaks, i, start, end);
-                });
-                return;
-            } else {
-                peaks = channels[0];
-            }
-        }
-
-        // Support arrays without negative peaks
-        var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
-        if (!hasMinValues) {
-            var reflectedPeaks = [];
-            for (var i = 0, len = peaks.length; i < len; i++) {
-                reflectedPeaks[2 * i] = peaks[i];
-                reflectedPeaks[2 * i + 1] = -peaks[i];
-            }
-            peaks = reflectedPeaks;
-        }
-
-        // A half-pixel offset makes lines crisp
-        var $ = 0.5 / this.params.pixelRatio;
-        var height = this.params.height * this.params.pixelRatio;
-        var offsetY = height * channelIndex || 0;
-
-        //##################### this is the change from the Drawer.Canvas/DrawWave function######################
-        offsetY += height/2;
-        height = height/2;
-        //#######################################################################################################
-
-        var halfH = height / 2;
-        var length = ~~(peaks.length / 2);
-
-        var scale = 1;
-        if (this.params.fillParent && this.width != length) {
-            scale = this.width / length;
-        }
-
-        var absmax = 1;
-        if (this.params.normalize) {
-            var max = WaveSurfer.util.max(peaks);
-            var min = WaveSurfer.util.min(peaks);
-            absmax = -min > max ? -min : max;
-        }
-
-        this.waveCc.fillStyle = this.params.waveColor;
-        if (this.progressCc) {
-            this.progressCc.fillStyle = this.params.progressColor;
-        }
-
-        [ this.waveCc, this.progressCc ].forEach(function (cc) {
-            if (!cc) { return; }
-
-            cc.beginPath();
-            cc.moveTo(start * scale + $, halfH + offsetY);
-
-            for (var i = start; i < end; i++) {
-                var h = Math.round(peaks[2 * i] / absmax * halfH);
-                cc.lineTo(i * scale + $, halfH - h + offsetY);
-            }
-
-            // Draw the bottom edge going backwards, to make a single
-            // closed hull to fill.
-            for (var i = end - 1; i >= start; i--) {
-                var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
-                cc.lineTo(i * scale + $, halfH - h + offsetY);
-            }
-
-            cc.closePath();
-            cc.fill();
-
-            // Draw Median line if desired
-            if(this.params.waveDrawMedianLine) {
-                cc.fillRect(0, halfH + offsetY - $, this.width, $);
-            }
-        }, this);
-    },
-
-    /**
      * Display the range for the plot graph
      */
     displayPlotRange: function()
     {
+        var fontSize = this.params.plotRangeFontSize * this.params.pixelRatio;
         var maxRange = this.plotMax.toPrecision(this.params.plotRangePrecision) + ' ' + this.params.plotRangeUnits;
         var minRange = this.plotMin.toPrecision(this.params.plotRangePrecision) + ' ' + this.params.plotRangeUnits;
-        this.waveCc.fillText(maxRange, 3, 10);
+        this.waveCc.font = fontSize.toString() + 'px ' + this.params.plotRangeFontType;
+        this.waveCc.fillText(maxRange, 3, fontSize);
         this.waveCc.fillText(minRange, 3, this.height/2);
 
     },
