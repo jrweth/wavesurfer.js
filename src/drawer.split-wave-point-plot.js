@@ -171,7 +171,8 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
             this.waveCc.fillRect(x, y, this.params.plotPointWidth, this.params.plotPointHeight);
 
             if(this.progressCc) {
-                this.progressCc.fillRect(x, y, this.params.plotPointWidth, this.params.plotPointHeight);
+                var pointHeight = this.params.plotPointHeight * this.params.pixelRatio;
+                this.progressCc.fillRect(x, y, this.params.plotPointWidth, pointHeight);
             }
         }
 
