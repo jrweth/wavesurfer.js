@@ -4,7 +4,7 @@
     define('wavesurfer', [], function () {
       return (root['WaveSurfer'] = factory());
     });
-  } else if (typeof exports === 'object') {
+  } else if (typeof module === 'object' && module.exports) {
     // Node. Does not work with strict CommonJS, but
     // only CommonJS-like environments that support module.exports,
     // like Node.
@@ -2259,6 +2259,626 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.MultiCanvas, {
 
     updateProgress: function (pos) {
         this.style(this.progressWave, { width: pos + 'px' });
+    }
+});
+
+'use strict';
+
+WaveSurfer.Drawer.SplitWavePointPlot = Object.create(WaveSurfer.Drawer.Canvas);
+
+WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
+
+    defaultPlotParams: {
+        plotNormalizeTo: 'whole',
+        plotTimeStart: 0,
+        plotMin: 0,
+        plotMax: 1,
+        plotColor     : '#f63',
+        plotProgressColor : '#F00',
+        plotPointHeight: 2,
+        plotPointWidth: 2,
+        plotSeparator: true,
+        plotSeparatorColor: 'black',
+        plotRangeDisplay: false,
+        plotRangeUnits: '',
+        plotRangePrecision: 4,
+        plotRangeIgnoreOutliers: false,
+        waveDrawMedianLine: true,
+        plotFileDelimiter:  '\t'
+    },
+
+    //object variables that get manipulated by various object functions
+    plotTimeStart: 0,  //the start time of our wave according to plot data
+    plotTimeEnd: -1,   //the end of our wave according to plot data
+    plotArrayLoaded: false,
+    plotArray: [],     //array of plot data objects containing time and plot value
+    plotPoints: [],        //calculated average plot points corresponding to value of our wave
+    plotMin: 0,
+    plotMax: 1,
+
+    /**
+     * Initializes the plot array. If params.plotFileUrl is provided an ajax call will be
+     * executed and drawing of the wave is delayed until plot info is retrieved
+     * @param params
+     */
+    initDrawer: function (params) {
+        var my = this;
+
+        //set defaults if not passed in
+        for(var paramName in this.defaultPlotParams) {
+            if(this.params[paramName] === undefined) {
+                this.params[paramName] = this.defaultPlotParams[paramName];
+            }
+        }
+
+        //set the plotTimeStart
+        this.plotTimeStart = this.params.plotTimeStart;
+
+        //check to see if plotTimeEnd
+        if(this.params.plotTimeEnd !== undefined) {
+            this.plotTimeEnd = this.params.plotTimeEnd;
+        }
+
+        //set the plot array
+        if (Array.isArray(params.plotArray)) {
+            this.plotArray = params.plotArray;
+            this.plotArrayLoaded = true;
+        }
+        //Need to load the plot array from ajax with our callback
+        else {
+            var onPlotArrayLoaded = function (plotArray) {
+                my.plotArray = plotArray;
+                my.plotArrayLoaded = true;
+                my.fireEvent('plot_array_loaded');
+            };
+            this.loadPlotArrayFromFile(params.plotFileUrl, onPlotArrayLoaded);
+        }
+    },
+
+    /**
+     * Draw the peaks - make sure the plotArray is loaded first
+     * @param peaks
+     * @param length
+     * @param start
+     * @param end
+     */
+    drawPeaks: function (peaks, length, start, end) {
+        //make sure that the plot array is already loaded
+        if (this.plotArrayLoaded == true) {
+
+            this.setWidth(length);
+
+            this.params.barWidth ?
+                this.drawBars(peaks, 0, start, end) :
+                this.drawWave(peaks, 0, start, end);
+
+            this.calculatePlots();
+            this.drawPlots();
+
+        }
+        //otherwise wait for the plot array to be loaded and then draw again
+        else {
+            var my = this;
+            my.on('plot-array-loaded', function () {
+                my.drawPeaks(peaks, length, start, end);
+            });
+        }
+    },
+
+    /**
+     * Loop through the calculated plot values and actually draw them
+     */
+    drawPlots: function() {
+        var height = this.params.height * this.params.pixelRatio /2;
+
+        var $ = 0.5 / this.params.pixelRatio;
+
+        this.waveCc.fillStyle = this.params.plotColor;
+        if(this.progressCc) {
+            this.progressCc.fillStyle = this.params.plotProgressColor;
+        }
+        for(var i in this.plotPoints) {
+            var x = parseInt(i);
+            var y = height - this.params.plotPointHeight - (this.plotPoints[i] * (height - this.params.plotPointHeight));
+            this.waveCc.fillRect(x, y, this.params.plotPointWidth, this.params.plotPointHeight);
+
+            if(this.progressCc) {
+                this.progressCc.fillRect(x, y, this.params.plotPointWidth, this.params.plotPointHeight);
+            }
+        }
+
+        //draw line to separate the two waves
+        if(this.params.plotSeparator) {
+            this.waveCc.fillStyle = this.params.plotSeparatorColor;
+            this.waveCc.fillRect(0, height, this.width, $);
+        }
+
+        if(this.params.plotRangeDisplay) {
+            this.displayPlotRange();
+        }
+    },
+
+
+    /**
+     * This function basically override the Drawer.Canvas drawWave but shifts everything down to the lower half of the
+     * of the canvas
+     */
+    drawWave: function (peaks, channelIndex, start, end) {
+        var my = this;
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(function(channelPeaks, i) {
+                    my.drawWave(channelPeaks, i, start, end);
+                });
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Support arrays without negative peaks
+        var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
+        if (!hasMinValues) {
+            var reflectedPeaks = [];
+            for (var i = 0, len = peaks.length; i < len; i++) {
+                reflectedPeaks[2 * i] = peaks[i];
+                reflectedPeaks[2 * i + 1] = -peaks[i];
+            }
+            peaks = reflectedPeaks;
+        }
+
+        // A half-pixel offset makes lines crisp
+        var $ = 0.5 / this.params.pixelRatio;
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+
+        //##################### this is the change from the Drawer.Canvas/DrawWave function######################
+        offsetY += height/2;
+        height = height/2;
+        //#######################################################################################################
+
+        var halfH = height / 2;
+        var length = ~~(peaks.length / 2);
+
+        var scale = 1;
+        if (this.params.fillParent && this.width != length) {
+            scale = this.width / length;
+        }
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            var max = WaveSurfer.util.max(peaks);
+            var min = WaveSurfer.util.min(peaks);
+            absmax = -min > max ? -min : max;
+        }
+
+        this.waveCc.fillStyle = this.params.waveColor;
+        if (this.progressCc) {
+            this.progressCc.fillStyle = this.params.progressColor;
+        }
+
+        [ this.waveCc, this.progressCc ].forEach(function (cc) {
+            if (!cc) { return; }
+
+            cc.beginPath();
+            cc.moveTo(start * scale + $, halfH + offsetY);
+
+            for (var i = start; i < end; i++) {
+                var h = Math.round(peaks[2 * i] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            // Draw the bottom edge going backwards, to make a single
+            // closed hull to fill.
+            for (var i = end - 1; i >= start; i--) {
+                var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            cc.closePath();
+            cc.fill();
+
+            // Draw Median line if desired
+            if(this.params.waveDrawMedianLine) {
+                cc.fillRect(0, halfH + offsetY - $, this.width, $);
+            }
+        }, this);
+    },
+
+    /**
+     * Display the range for the plot graph
+     */
+    displayPlotRange: function()
+    {
+        var maxRange = this.plotMax.toPrecision(this.params.plotRangePrecision) + ' ' + this.params.plotRangeUnits;
+        var minRange = this.plotMin.toPrecision(this.params.plotRangePrecision) + ' ' + this.params.plotRangeUnits;
+        this.waveCc.fillText(maxRange, 3, 10);
+        this.waveCc.fillText(minRange, 3, this.height/2);
+
+    },
+    /**
+     * This function loops through the plotArray and converts it to the plot points
+     * to be drawn on the canvas keyed by their position
+     */
+    calculatePlots: function() {
+        //reset plots array
+        this.plotPoints = {};
+
+        //make sure we have our plotTimeEnd
+        this.calculatePlotTimeEnd();
+
+        var pointsForAverage = [];
+        var previousWaveIndex = -1;
+        var maxPlot = 0;
+        var minPlot = 99999999999999;
+        var maxSegmentPlot = 0;
+        var minSegmentPlot = 99999999999999;
+        var duration = this.plotTimeEnd - this.plotTimeStart;
+
+        //loop through our plotArray and map values to wave indexes and take the average values for each wave index
+        for(var i = 0; i < this.plotArray.length; i++) {
+            var dataPoint = this.plotArray[i];
+            if(dataPoint.value > maxPlot) {maxPlot = dataPoint.value;}
+            if(dataPoint.value < minPlot) {minPlot = dataPoint.value;}
+
+            //make sure we are in the specified range
+            if(dataPoint.time >= this.plotTimeStart && dataPoint.time <= this.plotTimeEnd) {
+                //get the wave index corresponding to the data point
+                var waveIndex = Math.round(this.width * (dataPoint.time - this.plotTimeStart) / duration);
+
+                pointsForAverage.push(dataPoint.value);
+
+                //if we have moved on to a new position in our wave record average and reset previousWaveIndex
+                if(waveIndex !== previousWaveIndex) {
+                    if(pointsForAverage.length > 0) {
+                        //get the average plot for this point
+                        var avgPlot = this.avg(pointsForAverage);
+
+                        //check for min max
+                        if(avgPlot > maxSegmentPlot) {maxSegmentPlot = avgPlot;}
+                        if(avgPlot < minSegmentPlot) {minSegmentPlot = avgPlot;}
+
+                        //add plot to the position
+                        this.plotPoints[previousWaveIndex] = avgPlot;
+                        pointsForAverage = [];
+                    }
+                }
+                previousWaveIndex = waveIndex;
+            }
+        }
+
+        //normalize the plots points
+        if(this.params.plotNormalizeTo == 'whole') {
+            this.plotMin = minPlot;
+            this.plotMax = maxPlot;
+        }
+        else if(this.params.plotNormalizeTo == 'values') {
+            this.plotMin = this.params.plotMin;
+            this.plotMax = this.params.plotMax;
+        }
+        else {
+            this.plotMin = minSegmentPlot;
+            this.plotMax = maxSegmentPlot;
+        }
+        this.normalizeValues();
+    },
+
+    /**
+     * Function to take all of the plots in this.plots and normalize them from 0 to one
+     * depending on this.plotMin and this.plotMax values
+     */
+    normalizeValues: function() {
+        var normalizedValues = {};
+
+        //check to make sure we should be normalizing
+        if(this.params.plotNormalizeTo === 'none') {return;}
+
+        for(var i in this.plotPoints) {
+            //get the normalized value between 0 and 1
+            var normalizedValue = (this.plotPoints[i] - this.plotMin) / (this.plotMax - this.plotMin);
+
+            //check if the value is above our specified range max
+            if(normalizedValue > 1) {
+                if(!this.params.plotRangeIgnoreOutliers) {
+                    normalizedValues[i] = 1;
+                }
+            }
+            //check if hte value is below our specified rant
+            else if(normalizedValue < 0) {
+                if(!this.params.plotRangeIgnoreOutliers) {
+                    normalizedValues[i] = 0;
+                }
+            }
+            //in our range add the normalized value
+            else {
+                normalizedValues[i] = normalizedValue;
+            }
+        }
+        this.plotPoints = normalizedValues;
+    },
+    /**
+     *
+     */
+
+    /**
+     * Function to load the plot array from a external file
+     *
+     * The text file should contain a series of lines.
+     * Each line should contain [audio time] [delimiter character] [plot value]
+     * e.g. "1.2355 [tab] 124.2321"
+     *
+     * @param plotFileUrl  url of the file containing time and value information
+     * @param onSuccess    function to run on success
+     * @param delimiter    the delimiter that separates the time and values on each line
+     */
+    loadPlotArrayFromFile: function(plotFileUrl, onSuccess, delimiter) {
+        //default delimiter to tab character
+        if (delimiter === undefined) {delimiter = '\t';}
+
+        var plotArray = [];
+
+        var options = {
+            url: plotFileUrl,
+            responseType: 'text'
+        };
+        var fileAjax = WaveSurfer.util.ajax(options);
+
+        fileAjax.on('load', function (data) {
+            if (data.currentTarget.status == 200) {
+                //split the file by line endings
+                var plotLines = data.currentTarget.responseText.split('\n');
+                //loop through each line and find the time and plot values (delimited by tab)
+                for (var i = 0; i < plotLines.length; i++) {
+                    var plotParts = plotLines[i].split(delimiter);
+                    if(plotParts.length == 2) {
+                        plotArray.push({time: parseFloat(plotParts[0]), value: parseFloat(plotParts[1])});
+                    }
+                }
+                //run success function
+                onSuccess(plotArray);
+            }
+        });
+    },
+
+    /***
+     * Calculate the end time of the plot
+     */
+    calculatePlotTimeEnd: function() {
+        if(this.params.plotTimeEnd !== undefined) {
+            this.plotTimeEnd = this.params.plotTimeEnd;
+        }
+        else {
+            this.plotTimeEnd = this.plotArray[this.plotArray.length -1].time;
+        }
+    },
+
+    /**
+     * Quick convenience function to average numbers in an array
+     * @param  array of values
+     * @returns {number}
+     */
+    avg: function(values) {
+        var sum = values.reduce(function(a, b) {return a+b;});
+        return sum/values.length;
+    }
+});
+
+WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, WaveSurfer.Observer);
+
+'use strict';
+
+WaveSurfer.Drawer.TextLine = Object.create(WaveSurfer.Drawer);
+
+WaveSurfer.util.extend(WaveSurfer.Drawer.TextLine, {
+    createElements: function () {
+        var waveCanvas = this.wrapper.appendChild(
+            this.style(document.createElement('canvas'), {
+                position: 'absolute',
+                zIndex: 1,
+                left: 0,
+                top: 0,
+                bottom: 0
+            })
+        );
+        this.waveCc = waveCanvas.getContext('2d');
+
+        this.progressWave = this.wrapper.appendChild(
+            this.style(document.createElement('wave'), {
+                position: 'absolute',
+                zIndex: 2,
+                left: 0,
+                top: 0,
+                bottom: 0,
+                overflow: 'hidden',
+                width: '0',
+                display: 'none',
+                boxSizing: 'border-box',
+                borderRightStyle: 'solid',
+                borderRightWidth: this.params.cursorWidth + 'px',
+                borderRightColor: this.params.cursorColor
+            })
+        );
+
+        if (this.params.waveColor != this.params.progressColor) {
+            var progressCanvas = this.progressWave.appendChild(
+                document.createElement('canvas')
+            );
+            this.progressCc = progressCanvas.getContext('2d');
+        }
+    },
+
+    updateSize: function () {
+        var width = Math.round(this.width / this.params.pixelRatio);
+
+        this.waveCc.canvas.width = this.width;
+        this.waveCc.canvas.height = this.height;
+        this.style(this.waveCc.canvas, { width: width + 'px'});
+
+        this.style(this.progressWave, { display: 'block'});
+
+        if (this.progressCc) {
+            this.progressCc.canvas.width = this.width;
+            this.progressCc.canvas.height = this.height;
+            this.style(this.progressCc.canvas, { width: width + 'px'});
+        }
+
+        this.clearWave();
+    },
+
+    clearWave: function () {
+        this.waveCc.clearRect(0, 0, this.width, this.height);
+        if (this.progressCc) {
+            this.progressCc.clearRect(0, 0, this.width, this.height);
+        }
+    },
+
+    drawBars: function (peaks, channelIndex, start, end) {
+        var my = this;
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(function(channelPeaks, i) {
+                    my.drawBars(channelPeaks, i, start, end);
+                });
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Bar wave draws the bottom only as a reflection of the top,
+        // so we don't need negative values
+        var hasMinVals = [].some.call(peaks, function (val) { return val < 0; });
+        // Skip every other value if there are negatives.
+        var peakIndexScale = 1;
+        if (hasMinVals) {
+            peakIndexScale = 2;
+        }
+
+        // A half-pixel offset makes lines crisp
+        var $ = 0.5 / this.params.pixelRatio;
+        var width = this.width;
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+        var length = peaks.length / peakIndexScale;
+        var bar = this.params.barWidth * this.params.pixelRatio;
+        var gap = Math.max(this.params.pixelRatio, ~~(bar / 2));
+        var step = bar + gap;
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            var max = WaveSurfer.util.max(peaks);
+            var min = WaveSurfer.util.min(peaks);
+            absmax = -min > max ? -min : max;
+        }
+
+        var scale = length / width;
+
+        this.waveCc.fillStyle = this.params.waveColor;
+        if (this.progressCc) {
+            this.progressCc.fillStyle = this.params.progressColor;
+        }
+
+        [ this.waveCc, this.progressCc ].forEach(function (cc) {
+            if (!cc) { return; }
+
+            for (var i = (start / scale); i < (end / scale); i += step) {
+                var peak = peaks[Math.floor(i * scale * peakIndexScale)] || 0;
+                var h = Math.round(peak / absmax * halfH);
+                cc.fillRect(i + $, halfH - h + offsetY, bar + $, h * 2);
+            }
+        }, this);
+    },
+
+    drawWave: function (peaks, channelIndex, start, end) {
+        var my = this;
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(function(channelPeaks, i) {
+                    my.drawWave(channelPeaks, i, start, end);
+                });
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Support arrays without negative peaks
+        var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
+        if (!hasMinValues) {
+            var reflectedPeaks = [];
+            for (var i = 0, len = peaks.length; i < len; i++) {
+                reflectedPeaks[2 * i] = peaks[i];
+                reflectedPeaks[2 * i + 1] = -peaks[i];
+            }
+            peaks = reflectedPeaks;
+        }
+
+        // A half-pixel offset makes lines crisp
+        var $ = 0.5 / this.params.pixelRatio;
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+        var length = ~~(peaks.length / 2);
+
+        var scale = 1;
+        if (this.params.fillParent && this.width != length) {
+            scale = this.width / length;
+        }
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            var max = WaveSurfer.util.max(peaks);
+            var min = WaveSurfer.util.min(peaks);
+            absmax = -min > max ? -min : max;
+        }
+
+        this.waveCc.fillStyle = this.params.waveColor;
+        if (this.progressCc) {
+            this.progressCc.fillStyle = this.params.progressColor;
+        }
+
+        [ this.waveCc, this.progressCc ].forEach(function (cc) {
+            if (!cc) { return; }
+
+            cc.beginPath();
+            cc.moveTo(start * scale + $, halfH + offsetY);
+
+            for (var i = start; i < end; i++) {
+                var h = Math.round(peaks[2 * i] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            // Draw the bottom edge going backwards, to make a single
+            // closed hull to fill.
+            for (var i = end - 1; i >= start; i--) {
+                var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            cc.closePath();
+            cc.fill();
+
+            // Always draw a median line
+            cc.fillRect(0, halfH + offsetY - $, this.width, $);
+        }, this);
+    },
+
+    updateProgress: function (pos) {
+        this.style(this.progressWave, { width: pos + 'px' });
+    },
+
+    getImage: function(type, quality) {
+        return this.waveCc.canvas.toDataURL(type, quality);
     }
 });
 

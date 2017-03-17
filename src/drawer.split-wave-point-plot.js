@@ -52,7 +52,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         plotRangePrecision: 4,
         plotRangeIgnoreOutliers: false,
         waveDrawMedianLine: true,
-        plotFileDelimiter:  "\t"
+        plotFileDelimiter:  '\t'
     },
 
     //object variables that get manipulated by various object functions
@@ -98,7 +98,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
                 my.plotArray = plotArray;
                 my.plotArrayLoaded = true;
                 my.fireEvent('plot_array_loaded');
-            }
+            };
             this.loadPlotArrayFromFile(params.plotFileUrl, onPlotArrayLoaded);
         }
     },
@@ -128,7 +128,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         else {
             var my = this;
             my.on('plot-array-loaded', function () {
-                my.drawPeaks(peaks, length, start, end)
+                my.drawPeaks(peaks, length, start, end);
             });
         }
     },
@@ -289,8 +289,8 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         //loop through our plotArray and map values to wave indexes and take the average values for each wave index
         for(var i = 0; i < this.plotArray.length; i++) {
             var dataPoint = this.plotArray[i];
-            if(dataPoint.value > maxPlot) maxPlot = dataPoint.value;
-            if(dataPoint.value < minPlot) minPlot = dataPoint.value;
+            if(dataPoint.value > maxPlot) {maxPlot = dataPoint.value;}
+            if(dataPoint.value < minPlot) {minPlot = dataPoint.value;}
 
             //make sure we are in the specified range
             if(dataPoint.time >= this.plotTimeStart && dataPoint.time <= this.plotTimeEnd) {
@@ -306,8 +306,8 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
                         var avgPlot = this.avg(pointsForAverage);
 
                         //check for min max
-                        if(avgPlot > maxSegmentPlot) maxSegmentPlot = avgPlot;
-                        if(avgPlot < minSegmentPlot) minSegmentPlot = avgPlot;
+                        if(avgPlot > maxSegmentPlot) {maxSegmentPlot = avgPlot;}
+                        if(avgPlot < minSegmentPlot) {minSegmentPlot = avgPlot;}
 
                         //add plot to the position
                         this.plotPoints[previousWaveIndex] = avgPlot;
@@ -342,7 +342,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         var normalizedValues = {};
 
         //check to make sure we should be normalizing
-        if(this.params.plotNormalizeTo === 'none') return;
+        if(this.params.plotNormalizeTo === 'none') {return;}
 
         for(var i in this.plotPoints) {
             //get the normalized value between 0 and 1
@@ -380,11 +380,11 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
      *
      * @param plotFileUrl  url of the file containing time and value information
      * @param onSuccess    function to run on success
-     * @param delimeter    the delimeter that separates the time and values on each line
+     * @param delimiter    the delimiter that separates the time and values on each line
      */
-    loadPlotArrayFromFile: function(plotFileUrl, onSuccess, delimeter) {
-        //default delimter to tab character
-        if (delimeter === undefined) delimeter = "\t";
+    loadPlotArrayFromFile: function(plotFileUrl, onSuccess, delimiter) {
+        //default delimiter to tab character
+        if (delimiter === undefined) {delimiter = '\t';}
 
         var plotArray = [];
 
@@ -397,10 +397,10 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         fileAjax.on('load', function (data) {
             if (data.currentTarget.status == 200) {
                 //split the file by line endings
-                var plotLines = data.currentTarget.responseText.split("\n");
+                var plotLines = data.currentTarget.responseText.split('\n');
                 //loop through each line and find the time and plot values (delimited by tab)
                 for (var i = 0; i < plotLines.length; i++) {
-                    var plotParts = plotLines[i].split(delimeter);
+                    var plotParts = plotLines[i].split(delimiter);
                     if(plotParts.length == 2) {
                         plotArray.push({time: parseFloat(plotParts[0]), value: parseFloat(plotParts[1])});
                     }
@@ -429,7 +429,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
      * @returns {number}
      */
     avg: function(values) {
-        var sum = values.reduce(function(a,b) {return a+b;});
+        var sum = values.reduce(function(a, b) {return a+b;});
         return sum/values.length;
     }
 });

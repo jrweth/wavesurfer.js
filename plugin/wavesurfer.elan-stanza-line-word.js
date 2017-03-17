@@ -1,4 +1,5 @@
 'use strict';
+
 WaveSurfer.ElanStanzaLineWord = Object.create(WaveSurfer.ELAN);
 
 WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
@@ -85,7 +86,7 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
 
             // body
             var tbody = document.createElement('tbody');
-            tbody.className = "elan-stanza";
+            tbody.className = 'elan-stanza';
             table.appendChild(tbody);
             //add a stanza header row
 
@@ -114,7 +115,7 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
                 //add the line column
                 var td = document.createElement('td');
                 td.dataset.ref = line.id;
-                td.className = 'wavesurfer-elan-line'
+                td.className = 'wavesurfer-elan-line';
 
                 //loop through words and add a span for each word
                 line.words.forEach(function (word) {
@@ -124,7 +125,7 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
                     span.dataset.end = word.end;
                     span.dataset.ref = word.id;
                     span.textContent = word.value + ' ';
-                    span.className = 'wavesurfer-elan-word elan-word-pending'
+                    span.className = 'wavesurfer-elan-word elan-word-pending';
                     td.appendChild(span);
                 });
                 row.appendChild(td);
@@ -199,8 +200,8 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
     {
         var maxHeight =  window.innerHeight - this.container.getBoundingClientRect().top;
         if(
-            row.offsetTop + row.clientHeight > this.container.scrollTop + maxHeight
-            || row.offsetTop < this.container.scrollTop
+            row.offsetTop + row.clientHeight > this.container.scrollTop + maxHeight ||
+            row.offsetTop < this.container.scrollTop
         ) {
             this.container.scrollTop = row.offsetTop;
         }
@@ -226,9 +227,9 @@ WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
                 var end = parseFloat(words[i].getAttribute('data-end'));
 
                 //check if the word is finished, current or pending and set class accordingly
-                if(end < time) words[i].classList.add('elan-word-finished');
-                else if(start > time) words[i].classList.add('elan-word-pending');
-                else (words[i].classList.add('elan-word-current'));
+                if(end < time) {words[i].classList.add('elan-word-finished');}
+                else if(start > time) {words[i].classList.add('elan-word-pending');}
+                else {words[i].classList.add('elan-word-current');}
 
             }
         }

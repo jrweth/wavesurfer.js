@@ -1,31 +1,58 @@
 'use strict';
 
+/**
+ * The Elan Wave Segment Plugin for Wavesurfer inserts a column containing wave forms
+ * into the table containing the rendered annoations for just to portion of the audio
+ * spanned by that annotation
+ *
+ * parameters that can be used at initialization are the following
+ *
+ * - ELAN:                     required - The ELAN instance used to parse the elan data
+ * - wafesurver:               required - The wavesurfer intance used to draw the original waveform
+ * - waveSegmentWidth:         optional - The width of each wave segment (defaults to 200)
+ * - waveSegmentHeight:        optional - The height of each wave segment (defaults to 30)
+ * - waveSegmentRenderer:      optional - The renderer (drawer) to be used for the wave segments
+ * - waveSegmentNormalizeTo:   optional - What to normalize each wave segment to [whole, segment,none]
+ */
 WaveSurfer.ELANWaveSegment = {
 
     defaultParams: {
         waveSegmentWidth: 200,
-        peaksPerSegment: 100,
+        waveSegmentPeaksPerSegment: 400,
         waveSegmentHeight: 30,
         waveSegmentRenderer: 'Canvas',
-        pixelRatio: 1,
-        normalizeSegmentsTo: 'entire' //[segment/entire/none'] can also be set to normalize to
+        waveSegmentNormalizeTo: 'whole',
+        pixelRatio:  window.devicePixelRatio || screen.deviceXDPI / screen.logicalXDPI
     },
 
+    //object attributes necessary for maintaining state
+    ELAN:          null,  //handle to the ELAN plugin
+    wavesurfer:    null,  //handle to the wavesurfer instance
+    waveSegments: [],     //array of wavesurfer instances for each line
+    maxPeak:        0,    //the maximum wave peak
+
+
+    /**
+     * Initialize the parameters and draw column
+     * @param params
+     */
     init: function (params) {
         // Extract relevant parameters (or defaults)
-        this.params = WaveSurfer.util.extend({}, this.defaultParams, params);
+        this.params = WaveSurfer.util.extend(this.defaultParams, params);
         this.ELAN = params.ELAN;
         this.wavesurfer = params.wavesurfer;
         this.waveSegments = [];
         this.maxPeak = 0;
 
         //determine what we will be normalizing to
-        switch (this.params.normalizeSegmentsTo) {
+        switch (this.params.waveSegmentNormalizeTo) {
             case 'segment':
                 this.params.normalize = true;
                 break;
-            case 'entire':
+            case 'whole':
                 this.calculateMaxPeak();
+                this.params.noramlize = false;
+                break;
             default:
                 this.params.normalize = false;
         }
@@ -33,7 +60,7 @@ WaveSurfer.ELANWaveSegment = {
     },
 
     /**
-     * Function to calculate the maximum peak in our entire audio clip
+     * Function to calculate the maximum peak in our whole audio clip
      */
     calculateMaxPeak: function() {
         var totalPeaks = this.ELAN.renderedAlignable.length * this.params.waveSegmentWidth;
@@ -45,7 +72,7 @@ WaveSurfer.ELANWaveSegment = {
     },
 
     /**
-     * uses the table created by Elan and addes a column header for the wave
+     * uses the table created by Elan and adds a column header for the wave
      * and then loops through each annotation row and creates a wave in each
      */
     addSegmentColumn: function() {
@@ -57,7 +84,7 @@ WaveSurfer.ELANWaveSegment = {
         var th = document.createElement('th');
         th.textContent = 'Wave';
         th.className = 'wavesurfer-wave';
-        th.setAttribute('style', 'width: ' + this.params.waveSegmentWidth + 'px')
+        th.setAttribute('style', 'width: ' + this.params.waveSegmentWidth + 'px');
 
         //insert wave form column as the second column
         tableRows[0].insertBefore(th, tableRows[0].firstChild.nextSibling);
@@ -89,7 +116,7 @@ WaveSurfer.ELANWaveSegment = {
         var segmentDuration  = endTime - startTime;
 
         //calculate the total number of peak by splitting our segment
-        var totalPeaks = totalDuration * this.params.peaksPerSegment / segmentDuration;
+        var totalPeaks = totalDuration * this.params.waveSegmentPeaksPerSegment / segmentDuration;
 
         var peakDuration = totalDuration / totalPeaks;
 
@@ -100,7 +127,7 @@ WaveSurfer.ELANWaveSegment = {
         var shiftedPeaks = [];
         //shift the peak indexes back to 0
         for(var i in peaks) {
-            if(this.params.normalizeSegmentsTo == 'entire') {
+            if(this.params.waveSegmentNormalizeTo == 'whole') {
                 shiftedPeaks.push(peaks[i]/this.maxPeak);
             }
             else {
@@ -119,7 +146,7 @@ WaveSurfer.ELANWaveSegment = {
 
         container.style.width = width.toString() + 'px';
         container.style.height = this.params.waveSegmentHeight.toString() + 'px';
-        container.className = "elan-wavesegment-container";
+        container.className = 'elan-wavesegment-container';
 
         el.appendChild(container);
 
@@ -135,7 +162,7 @@ WaveSurfer.ELANWaveSegment = {
         drawerParams.fillParent = true;
 
         this.waveSegments[elanIndex].init(container, drawerParams);
-        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth, 0, peaks.length);
+        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth * this.params.pixelRatio, 0, peaks.length);
 
         this.waveSegments[elanIndex].updateProgress(0);
 
