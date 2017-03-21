@@ -1,6 +1,31 @@
 wavesurfer.js changelog
 =======================
 
+1.3.7 (19.03.2017)
+------------------
+- A fix for the timeline plugin (#1049)
+
+1.3.6 (19.03.2017)
+------------------
+- New renderer: `SplitWavePointPlot` (#1048)
+
+1.3.5 (10.03.2017)
+------------------
+- Add a `getImage` method for MultiCanvas (#1012)
+- Add Playlist plugin (#1018)
+- Add Playlist plugin sample (#1019)
+- Add a new parameter `barHeight` (#1020)
+- Add a `playBackRate` method for MediaElement (#1022)
+
+1.3.4 (25.02.2017)
+------------------
+- Add a new parameter `forceDecode` (#1009)
+
+1.3.3 (23.02.2017)
+------------------
+- Add Media Session plugin (#996)
+- Fix check for AudioContext.close (#998)
+
 1.3.2 (12.02.2017)
 ------------------
 - Add a `getVolume` method (#979)

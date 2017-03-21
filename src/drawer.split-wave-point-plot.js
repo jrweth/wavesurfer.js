@@ -29,7 +29,6 @@
  * - plotRangeFontSize:       the font for displaying the range - defaults to 20
  * - plotRangeFontType:       the font type for displaying range - defaults to Ariel
  * - plotRangeIgnoreOutliers: boolean indicating if values outside of range should be ignored or plotted at min/max
- * - waveDrawMedianLine:      boolean indicating if the median line should be drawn for the wave form
  */
 
 
@@ -104,7 +103,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
                 my.plotArrayLoaded = true;
                 my.fireEvent('plot_array_loaded');
             };
-            this.loadPlotArrayFromFile(params.plotFileUrl, onPlotArrayLoaded);
+            this.loadPlotArrayFromFile(params.plotFileUrl, onPlotArrayLoaded, this.params.plotFileDelimiter);
         }
     },
 
@@ -168,10 +167,11 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.SplitWavePointPlot, {
         for(var i in this.plotPoints) {
             var x = parseInt(i);
             var y = height - this.params.plotPointHeight - (this.plotPoints[i] * (height - this.params.plotPointHeight));
-            this.waveCc.fillRect(x, y, this.params.plotPointWidth, this.params.plotPointHeight);
+            var pointHeight = this.params.plotPointHeight;
+
+            this.waveCc.fillRect(x, y, this.params.plotPointWidth, pointHeight);
 
             if(this.progressCc) {
-                var pointHeight = this.params.plotPointHeight * this.params.pixelRatio;
                 this.progressCc.fillRect(x, y, this.params.plotPointWidth, pointHeight);
             }
         }
