@@ -87,9 +87,7 @@
             </ul>
 
             <h2>Javascript Initialization</h2>
-            <pre><code>
-
-// Create the wave surfer instance
+            <pre><code>// Create the wave surfer instance
 var wavesurfer = Object.create(WaveSurfer);
 
 // Create elan instance
@@ -137,15 +135,25 @@ document.addEventListener('DOMContentLoaded', function () {
         elanWaveSegment.init(options);
     });
 
-
+    //update waveSegments when time advances
     var onProgress = function (time) {
         elanWaveSegment.onProgress(time);
-        ...code for scrolling Elan
+        //code for scrolling Elan goes here
     };
-
     wavesurfer.on('audioprocess', onProgress);
-});
-            </code></pre>
+}); </code></pre>
+            <h2>Options</h2>
+            <ul>
+                <li><code>ELAN:</code>                       required - The ELAN instance used to parse the elan data</li>
+                <li><code>wafesurver:</code>                 required - The wavesurfer instance used to draw the original waveform</li>
+                <li><code>waveSegmentWidth:</code>           optional - The width of each wave segment (defaults to 200)</li>
+                <li><code>waveSegmentPeaksPerSegment:</code> optional - The number of peaks that should be drawn (defaults to 400)</li>
+                <li><code>waveSegmentHeight:</code>          optional - The height of each wave segment (defaults to 30)</li>
+                <li><code>waveSegmentRenderer:</code>        optional - The renderer (drawer) to be used for the wave segments</li>
+                <li><code>waveSegmentNormalizeTo:</code>     optional - What to normalize each wave segment to [whole, segment,none]</li>
+                <li><code>waveSegmentBorderWidth:</code>     optional - The width of the border of the container element</li>
+                <li><code>waveSegmentBarHeight:</code>       optional - the height of the peaks/bars (defaults to 1)</li>
+            </ul>
             <div class="footer row">
                 <div class="col-sm-12">
                     <a rel="license" href="https://creativecommons.org/licenses/by/3.0/deed.en_US"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/3.0/80x15.png" /></a>
