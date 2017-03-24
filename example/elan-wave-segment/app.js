@@ -4,7 +4,7 @@
 var wavesurfer = Object.create(WaveSurfer);
 
 // Create elan instance
-var elan = Object.create(WaveSurfer.ElanStanzaLineWord);
+var elan = Object.create(WaveSurfer.ELAN);
 
 // Create Elan Wave Segment instance
 var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
@@ -20,14 +20,10 @@ document.addEventListener('DOMContentLoaded', function () {
         selectionColor: '#d0e9c6',
         backend: 'WebAudio',
         loopSelection : false,
-        renderer: 'CanvasPitch',
-        waveSegmentRenderer: 'CanvasPitch',
+        renderer: 'Canvas',
+        waveSegmentRenderer: 'Canvas',
         waveSegmentHeight: 50,
-        pitchFileUrl: 'transcripts/i_know_a_man.PitchTier.txt',
-        pitchPointWidth: 5,
-        pitchPointHeight: 5,
-        height: 300,
-        scrollParent: true
+        height: 100,
     };
 
     if (location.search.match('scroll')) {
@@ -67,8 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
     //set up listener for when elan is done
     elan.on('ready', function (data) {
         //go load the wave form
-        //wavesurfer.load('transcripts/GoDownDeath.mp3');
-        wavesurfer.load('transcripts/i_know_a_man.mp3');
+        wavesurfer.load('../elan/transcripts/001z.mp3');
 
         //add some styling to elan table
         var classList = elan.container.querySelector('table').classList;
@@ -77,48 +72,35 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    //############################## initialize wavesurfer and related plugins###############
+
     // Init wavesurfer
     wavesurfer.init(options);
 
     //init elan
     elan.init({
-        //url: 'transcripts/GoDownDeath.xml',
-        url: 'transcripts/i_know_a_man.xml',
+        url: '../elan/transcripts/001z.xml',
         container: '#annotations',
         tiers: {
-            'Line Text': true
+            Text: true,
+            Comments: true
         }
     });
 
-    //set up handler to initialize the WaveSegment once the pitch array is retrieved
-    var initWaveSegment = function(pitchArray) {
-        delete options.pitchFileUrl;
-        options.pitchArray = pitchArray;
-        //both elan and wavesurfer should be ready - so initialization of wave segments can now happen
-        options.ELAN = elan;
-        options.wavesurfer = wavesurfer;
-        options.pitchTimeEnd = wavesurfer.backend.getDuration();
-
-        options.pitchPointWidth = 2;
-        options.pitchPointHeight = 2;
-        elanWaveSegment.init(options);
-    }
-
-    //set up listener for when wavesurfer is done
+    //int elanWaveSegment when wavesurfer is done loading the soud file
     wavesurfer.on('ready', function() {
-        WaveSurfer.Drawer.CanvasPitch.loadPitchArrayFromFile(options.pitchFileUrl, initWaveSegment);
+        options.plotTimeEnd = wavesurfer.backend.getDuration();
+        options.wavesurfer = wavesurfer;
+        options.ELAN = elan;
+        options.scrollParent = false;
+        elanWaveSegment.init(options);
     });
 
 
-
-    //setup progress updates for Elan and Elan Wave Segment
-    var prevAnnotation, prevRow, region, prevWord;
+    var prevAnnotation, prevRow, region;
     var onProgress = function (time) {
-        var annotation = elan.getRenderedAnnotation(time);
-        var word = elan.getWordAtTime(time);
-
         elanWaveSegment.onProgress(time);
-
+        var annotation = elan.getRenderedAnnotation(time);
 
         if (prevAnnotation != annotation) {
             prevAnnotation = annotation;
@@ -136,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (before) {
                     elan.container.scrollTop = before.offsetTop;
                 }
+
                 // Region
                 region = wavesurfer.addRegion({
                     start: annotation.start,
@@ -143,26 +126,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     resize: false,
                     color: 'rgba(223, 240, 216, 0.7)'
                 });
-            }
-        }
-
-        if(prevWord != word) {
-            prevWord = word;
-
-            var words = document.getElementsByClassName('wavesurfer-elan-word');
-            for(var i = 0; i < words.length; i++) {
-                //clear out all previous highlighting
-                words[i].classList.remove('elan-word-pending');
-                words[i].classList.remove('elan-word-current');
-                words[i].classList.remove('elan-word-finished');
-
-                var start = parseFloat(words[i].getAttribute('data-start'));
-                var end = parseFloat(words[i].getAttribute('data-end'));
-
-                if(end < time) words[i].classList.add('elan-word-finished');
-                else if(start > time) words[i].classList.add('elan-word-pending');
-                else (words[i].classList.add('elan-word-current'));
-
             }
         }
     };

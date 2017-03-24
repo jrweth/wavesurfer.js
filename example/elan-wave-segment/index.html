@@ -15,27 +15,15 @@
         <link rel="screenshot" itemprop="screenshot" href="https://katspaugh.github.io/wavesurfer.js/example/screenshot.png" />
 
         <!-- wavesurfer.js -->
-        <script src="../../src/wavesurfer.js"></script>
-        <script src="../../src/util.js"></script>
-        <script src="../../src/webaudio.js"></script>
-        <script src="../../src/mediaelement.js"></script>
-        <script src="../../src/drawer.js"></script>
-        <script src="../../src/drawer.canvas.js"></script>
-        <script src="../../src/drawer.canvaspitch.js"></script>
-        <script src="../../src/drawer.multicanvas.js"></script>
-        <script src="../../src/peakcache.js"></script>
-        <script src="../../src/html-init.js"></script>
+        <script src="../../dist/wavesurfer.min.js"></script>
 
         <!-- regions plugin -->
         <script src="../../dist/plugin/wavesurfer.regions.min.js"></script>
 
         <!-- ELAN format renderer -->
-        <script src="../../plugin/wavesurfer.elan.js"></script>
+        <script src="../../dist/plugin/wavesurfer.elan.min.js"></script>
 
-        <!-- EALN wave segment renderer -->
-        <script src="../../plugin/wavesurfer.elan-stanza-line-word.js"></script>
-
-        <!-- EALN wave segment renderer -->
+        <!-- ELAN wave segment renderer -->
         <script src="../../plugin/wavesurfer.elan-wave-segment.js"></script>
 
         <!-- App -->
@@ -55,6 +43,9 @@
 
                 <h1 itemprop="name"><a href="http://wavesurfer-js.org">wavesurfer.js</a><noindex> + <a rel="nofollow" href="http://spokencorpora.ru/showelan.py">ELAN</a> + Wave Segment</noindex></h1>
             </div>
+            <div><p>The Elan Wave Segment Plugin uses the table and the time values created by the
+                <a href="../elan/index.html">ELAN plugin</a> to insert a wave form column for each row.
+            </p></div>
 
             <div id="demo">
                 <div id="waveform">
@@ -80,6 +71,81 @@
                 <!-- Here be transcript -->
             </div>
 
+            <h2>How to Enable Elan Wave Segment</h2>
+
+            <h3>Javascript Dependencies</h3>
+            <ul>
+                <li>Wavesufer <code></code></li>
+                <li>Region Plugin <code></code></li></li>
+                <li>ElAN Plugin <code></code></li></li>
+                <li>ELAN Wave Segment</li>
+                <pre><code>&lt;script src="[path_to]/wavesurfer.min.js"&gt;&lt;/script&gt;
+&lt;script src="[path_to]/plugin/wavesurfer.region.min.js"&gt;&lt;/script&gt;
+&lt;script src="[path_to]/plugin/wavesurfer.elan.min.js"&gt;&lt;/script&gt;
+&lt;script src="[path_to]/plugin/wavesurfer.elan-wave-segment.min.js"&gt;&lt;/script&gt; </code></pre>
+
+            </ul>
+
+            <h2>Javascript Initialization</h2>
+            <pre><code>
+
+// Create the wave surfer instance
+var wavesurfer = Object.create(WaveSurfer);
+
+// Create elan instance
+var elan = Object.create(WaveSurfer.ELAN);
+
+// Create Elan Wave Segment instance
+var elanWaveSegment = Object.create(WaveSurfer.ELANWaveSegment);
+
+document.addEventListener('DOMContentLoaded', function () {
+    var options = {
+        container     : '#waveform',
+    };
+
+    //################## set up some listeners ####################
+
+    //set up listener for when elan is done
+    elan.on('ready', function (data) {
+        wavesurfer.load('../elan/transcripts/001z.mp3');
+    });
+
+    //set up listener for playing when clicked on
+    elan.on('select', function (start, end) {
+        wavesurfer.backend.play(start, end);
+    });
+    //############################## initialize wavesurfer and related plugins###############
+
+    // Init wavesurfer
+    wavesurfer.init(options);
+
+    //init elan
+    elan.init({
+        url: '../elan/transcripts/001z.xml',
+        container: '#annotations',
+        tiers: {
+            Text: true,
+            Comments: true
+        }
+    });
+
+    //int elanWaveSegment when wavesurfer is done loading the sound file
+    wavesurfer.on('ready', function() {
+        options.plotTimeEnd = wavesurfer.backend.getDuration();
+        options.wavesurfer = wavesurfer;
+        options.ELAN = elan;
+        elanWaveSegment.init(options);
+    });
+
+
+    var onProgress = function (time) {
+        elanWaveSegment.onProgress(time);
+        ...code for scrolling Elan
+    };
+
+    wavesurfer.on('audioprocess', onProgress);
+});
+            </code></pre>
             <div class="footer row">
                 <div class="col-sm-12">
                     <a rel="license" href="https://creativecommons.org/licenses/by/3.0/deed.en_US"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/3.0/80x15.png" /></a>

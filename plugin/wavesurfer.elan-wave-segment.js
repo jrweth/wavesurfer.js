@@ -1,27 +1,35 @@
 'use strict';
 
 /**
- * The Elan Wave Segment Plugin for Wavesurfer inserts a column containing wave forms
- * into the table containing the rendered annoations for just to portion of the audio
- * spanned by that annotation
+ * The Elan Wave Segment Plugin for Wavesurfer is based upon the Elan Plugin
+ * It uses the timings of the rendered annotations from the ELAN plugin
+ * to render a separate wave for each separate line in the annotation table.
+ *
+ * This plugin should only be initialized once the
+ *
  *
  * parameters that can be used at initialization are the following
  *
- * - ELAN:                     required - The ELAN instance used to parse the elan data
- * - wafesurver:               required - The wavesurfer intance used to draw the original waveform
- * - waveSegmentWidth:         optional - The width of each wave segment (defaults to 200)
- * - waveSegmentHeight:        optional - The height of each wave segment (defaults to 30)
- * - waveSegmentRenderer:      optional - The renderer (drawer) to be used for the wave segments
- * - waveSegmentNormalizeTo:   optional - What to normalize each wave segment to [whole, segment,none]
+ * - ELAN:                       required - The ELAN instance used to parse the elan data
+ * - wafesurver:                 required - The wavesurfer instance used to draw the original waveform
+ * - waveSegmentWidth:           optional - The width of each wave segment (defaults to 200)
+ * - waveSegmentPeaksPerSegment: optional - The number of peaks that should be drawn (defaults to 400)
+ * - waveSegmentHeight:          optional - The height of each wave segment (defaults to 30)
+ * - waveSegmentRenderer:        optional - The renderer (drawer) to be used for the wave segments
+ * - waveSegmentNormalizeTo:     optional - What to normalize each wave segment to [whole, segment,none]
+ * - waveSegmentBorderWidth:     optional - The width of the border of the container element
+ * - waveSegmentBarHeight:       optional - the height of the peaks/bars (defaults to 1)
  */
 WaveSurfer.ELANWaveSegment = {
 
     defaultParams: {
         waveSegmentWidth: 200,
-        waveSegmentPeaksPerSegment: 400,
+        waveSegmentPeaksPerSegment: 200,
         waveSegmentHeight: 30,
         waveSegmentRenderer: 'Canvas',
         waveSegmentNormalizeTo: 'whole',
+        waveSegmentBarHeight: 1,
+        waveSegmentBorderWidth: 1,
         pixelRatio:  window.devicePixelRatio || screen.deviceXDPI / screen.logicalXDPI
     },
 
@@ -33,7 +41,7 @@ WaveSurfer.ELANWaveSegment = {
 
 
     /**
-     * Initialize the parameters and draw column
+     * Initialize the parameters and insert column and wave forms
      * @param params
      */
     init: function (params) {
@@ -144,25 +152,28 @@ WaveSurfer.ELANWaveSegment = {
         var container = document.createElement('div');
         var width = this.params.waveSegmentWidth;
 
-        container.style.width = width.toString() + 'px';
+        container.style.width = (width + (this.params.waveSegmentBorderWidth*2)).toString() + 'px';
         container.style.height = this.params.waveSegmentHeight.toString() + 'px';
         container.className = 'elan-wavesegment-container';
 
         el.appendChild(container);
 
         var peaks = this.getPeaksForTimeSegment(line.start, line.end);
-        this.waveSegments[elanIndex] = Object.create(WaveSurfer.Drawer[this.params.waveSegmentRenderer]);
 
 
         var drawerParams = this.params;
         drawerParams.fillParent = true;
         drawerParams.height = this.params.waveSegmentHeight;
+        drawerParams.barHeight = this.params.waveSegmentBarHeight;
         drawerParams.plotTimeStart = line.start;
         drawerParams.plotTimeEnd = line.end;
         drawerParams.fillParent = true;
+        drawerParams.scrollParent = false;
 
+        //create the wave segmenet drawer and initialize in the container
+        this.waveSegments[elanIndex] = Object.create(WaveSurfer.Drawer[this.params.waveSegmentRenderer]);
         this.waveSegments[elanIndex].init(container, drawerParams);
-        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth * this.params.pixelRatio, 0, peaks.length);
+        this.waveSegments[elanIndex].drawPeaks(peaks, this.params.waveSegmentWidth * this.params.pixelRatio, 0, this.params.waveSegmentPeaksPerSegment);
 
         this.waveSegments[elanIndex].updateProgress(0);
 
@@ -196,6 +207,7 @@ WaveSurfer.ELANWaveSegment = {
         }
 
     }
+
 
 };
 
