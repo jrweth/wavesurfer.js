@@ -1,5 +1,16 @@
 'use strict';
 
+/**
+ * The ElanStanzaLineWord Plugin for Wavesurfer is based upon the Elan Plugin.
+ * In order for this plugin to work the elan file must be annotated in a specific
+ * way with tiers STANZA, LINE, and WORD.  (with the line and word tiers being
+ * child annotations).
+ *
+ * The purpose is to display the text of the audio in Stanzas
+ * Lines and Words, and connect the progress of the audio with the display
+ * of the text which will be highlighted as the audio progresses.
+ *
+ */
 WaveSurfer.ElanStanzaLineWord = Object.create(WaveSurfer.ELAN);
 
 WaveSurfer.util.extend(WaveSurfer.ElanStanzaLineWord, {
